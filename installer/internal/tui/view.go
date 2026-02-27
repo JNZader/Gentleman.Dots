@@ -128,10 +128,13 @@ func (m Model) View() string {
 func (m Model) renderWelcome() string {
 	var s strings.Builder
 
-	// Logo
-	s.WriteString(LogoStyle.Render(logo))
+	// Logo centered over brand text
+	renderedBrand := TitleStyle.Render(brandText)
+	brandWidth := lipgloss.Width(renderedBrand)
+	renderedLogo := LogoStyle.Render(logo)
+	s.WriteString(lipgloss.PlaceHorizontal(brandWidth, lipgloss.Center, renderedLogo))
 	s.WriteString("\n")
-	s.WriteString(TitleStyle.Render(brandText))
+	s.WriteString(renderedBrand)
 	s.WriteString("\n\n")
 
 	// System info
