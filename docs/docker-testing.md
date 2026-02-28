@@ -1,6 +1,6 @@
 # Docker Testing
 
-Test the Gentleman.Dots installer in an isolated Ubuntu environment without affecting your system.
+Test the Javi.Dots installer in an isolated Ubuntu environment without affecting your system.
 
 ## Table of Contents
 

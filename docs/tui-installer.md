@@ -1,6 +1,6 @@
 # TUI Installer
 
-The Gentleman.Dots TUI Installer is a modern, interactive terminal application built with Go and [Bubbletea](https://github.com/charmbracelet/bubbletea) that guides you through the complete setup of your development environment.
+The Javi.Dots TUI Installer is a modern, interactive terminal application built with Go and [Bubbletea](https://github.com/charmbracelet/bubbletea) that guides you through the complete setup of your development environment.
 
 ## Table of Contents
 
@@ -39,16 +39,16 @@ gentleman-dots
 
 | Platform | Command |
 |----------|---------|
-| macOS Apple Silicon | `curl -sL https://github.com/Gentleman-Programming/Gentleman.Dots/releases/latest/download/gentleman-dots-darwin-arm64.tar.gz \| tar xz && ./gentleman-dots` |
-| macOS Intel | `curl -sL https://github.com/Gentleman-Programming/Gentleman.Dots/releases/latest/download/gentleman-dots-darwin-amd64.tar.gz \| tar xz && ./gentleman-dots` |
-| Linux x86_64 | `curl -sL https://github.com/Gentleman-Programming/Gentleman.Dots/releases/latest/download/gentleman-dots-linux-amd64.tar.gz \| tar xz && ./gentleman-dots` |
-| Linux ARM64 | `curl -sL https://github.com/Gentleman-Programming/Gentleman.Dots/releases/latest/download/gentleman-dots-linux-arm64.tar.gz \| tar xz && ./gentleman-dots` |
+| macOS Apple Silicon | `curl -sL https://github.com/JNZader/Javi.Dots/releases/latest/download/gentleman-dots-darwin-arm64.tar.gz \| tar xz && ./gentleman-dots` |
+| macOS Intel | `curl -sL https://github.com/JNZader/Javi.Dots/releases/latest/download/gentleman-dots-darwin-amd64.tar.gz \| tar xz && ./gentleman-dots` |
+| Linux x86_64 | `curl -sL https://github.com/JNZader/Javi.Dots/releases/latest/download/gentleman-dots-linux-amd64.tar.gz \| tar xz && ./gentleman-dots` |
+| Linux ARM64 | `curl -sL https://github.com/JNZader/Javi.Dots/releases/latest/download/gentleman-dots-linux-arm64.tar.gz \| tar xz && ./gentleman-dots` |
 
 ### Option 3: Build from Source
 
 ```bash
-git clone https://github.com/Gentleman-Programming/Gentleman.Dots.git
-cd Gentleman.Dots/installer
+git clone https://github.com/JNZader/Javi.Dots.git
+cd Javi.Dots/installer
 go build -o gentleman-dots ./cmd/gentleman-installer
 ./gentleman-dots
 ```
