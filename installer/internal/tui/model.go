@@ -23,6 +23,7 @@ const (
 	ScreenShellSelect
 	ScreenWMSelect
 	ScreenNvimSelect
+	ScreenZedSelect
 	ScreenInstalling
 	ScreenComplete
 	ScreenError
@@ -119,6 +120,7 @@ type UserChoices struct {
 	Shell        string // "fish", "zsh", "nushell"
 	WindowMgr    string // "tmux", "zellij", "none"
 	InstallNvim  bool
+	InstallZed   bool
 	CreateBackup bool // Whether to backup existing configs
 	// AI Tools and Framework
 	AITools              []string // Selected AI tools: "claude", "opencode"
@@ -396,6 +398,8 @@ func (m Model) GetCurrentOptions() []string {
 		return []string{"Tmux", "Zellij", "None", "─────────────", "ℹ️  Learn about multiplexers"}
 	case ScreenNvimSelect:
 		return []string{"Yes, install Neovim with config", "No, skip Neovim", "─────────────", "ℹ️  Learn about Neovim", "⌨️  View Keymaps", "📖 LazyVim Guide"}
+	case ScreenZedSelect:
+		return []string{"Yes, install Zed with config", "No, skip Zed"}
 	case ScreenAIToolsSelect:
 		return []string{"Claude Code", "OpenCode", "Gemini CLI", "GitHub Copilot", "Codex CLI", "─────────────", "✅ Confirm selection"}
 	case ScreenAIFrameworkConfirm:
@@ -563,20 +567,22 @@ func (m Model) GetScreenTitle() string {
 		return "Step 5: Choose Window Manager"
 	case ScreenNvimSelect:
 		return "Step 6: Neovim Configuration"
+	case ScreenZedSelect:
+		return "Step 7: Zed Editor"
 	case ScreenAIToolsSelect:
-		return "Step 7: AI Coding Tools"
+		return "Step 8: AI Coding Tools"
 	case ScreenAIFrameworkConfirm:
-		return "Step 8: AI Framework"
+		return "Step 9: AI Framework"
 	case ScreenAIFrameworkPreset:
-		return "Step 8: Choose Framework Preset"
+		return "Step 9: Choose Framework Preset"
 	case ScreenAIFrameworkCategories:
-		return "Step 8: Select Module Categories"
+		return "Step 9: Select Module Categories"
 	case ScreenAIFrameworkCategoryItems:
 		if m.SelectedModuleCategory >= 0 && m.SelectedModuleCategory < len(moduleCategories) {
 			cat := moduleCategories[m.SelectedModuleCategory]
-			return fmt.Sprintf("Step 8: %s %s", cat.Icon, cat.Label)
+			return fmt.Sprintf("Step 9: %s %s", cat.Icon, cat.Label)
 		}
-		return "Step 8: Select Modules"
+		return "Step 9: Select Modules"
 	case ScreenBackupConfirm:
 		return "⚠️  Existing Configs Detected"
 	case ScreenRestoreBackup:
@@ -709,6 +715,8 @@ func (m Model) GetScreenDescription() string {
 		return "Terminal multiplexer for managing sessions"
 	case ScreenNvimSelect:
 		return "Includes LSP, TreeSitter, and Gentleman config"
+	case ScreenZedSelect:
+		return "High-performance editor with Vim mode and AI agent support"
 	case ScreenAIToolsSelect:
 		return "Toggle tools with Enter. Confirm when ready."
 	case ScreenAIFrameworkConfirm:
@@ -1048,6 +1056,16 @@ func (m *Model) SetupInstallSteps() {
 			ID:          "nvim",
 			Name:        "Install Neovim",
 			Description: "Editor with config",
+			Status:      StatusPending,
+		})
+	}
+
+	// Zed editor (not interactive)
+	if m.Choices.InstallZed {
+		m.Steps = append(m.Steps, InstallStep{
+			ID:          "zed",
+			Name:        "Install Zed",
+			Description: "Editor with Vim mode",
 			Status:      StatusPending,
 		})
 	}

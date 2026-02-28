@@ -107,6 +107,11 @@ func buildStepsForChoices(m *Model) []InstallStep {
 		steps = append(steps, InstallStep{ID: "nvim", Name: "Install Neovim configuration"})
 	}
 
+	// Zed editor
+	if m.Choices.InstallZed {
+		steps = append(steps, InstallStep{ID: "zed", Name: "Install Zed editor"})
+	}
+
 	// AI Tools
 	if len(m.Choices.AITools) > 0 {
 		steps = append(steps, InstallStep{ID: "aitools", Name: "Install AI tools"})

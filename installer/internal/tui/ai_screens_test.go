@@ -582,11 +582,11 @@ func TestAIScreenTitles(t *testing.T) {
 		screen Screen
 		expect string
 	}{
-		{ScreenAIToolsSelect, "Step 7"},
-		{ScreenAIFrameworkConfirm, "Step 8"},
-		{ScreenAIFrameworkPreset, "Step 8"},
-		{ScreenAIFrameworkCategories, "Step 8"},
-		{ScreenAIFrameworkCategoryItems, "Step 8"},
+		{ScreenAIToolsSelect, "Step 8"},
+		{ScreenAIFrameworkConfirm, "Step 9"},
+		{ScreenAIFrameworkPreset, "Step 9"},
+		{ScreenAIFrameworkCategories, "Step 9"},
+		{ScreenAIFrameworkCategoryItems, "Step 9"},
 	}
 
 	for _, tt := range tests {
@@ -611,7 +611,7 @@ func TestAICategoryItemsScreenTitle(t *testing.T) {
 
 // --- Screen Flow Tests ---
 
-func TestNvimSelectToAIToolsTransition(t *testing.T) {
+func TestNvimSelectToZedSelectTransition(t *testing.T) {
 	m := NewModel()
 	m.Screen = ScreenNvimSelect
 	m.Cursor = 0 // Yes, install Neovim
@@ -621,6 +621,22 @@ func TestNvimSelectToAIToolsTransition(t *testing.T) {
 
 	if !newModel.Choices.InstallNvim {
 		t.Error("Expected InstallNvim to be true")
+	}
+	if newModel.Screen != ScreenZedSelect {
+		t.Errorf("Expected ScreenZedSelect, got %v", newModel.Screen)
+	}
+}
+
+func TestZedSelectToAIToolsTransition(t *testing.T) {
+	m := NewModel()
+	m.Screen = ScreenZedSelect
+	m.Cursor = 0 // Yes, install Zed
+
+	result, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	newModel := result.(Model)
+
+	if !newModel.Choices.InstallZed {
+		t.Error("Expected InstallZed to be true")
 	}
 	if newModel.Screen != ScreenAIToolsSelect {
 		t.Errorf("Expected ScreenAIToolsSelect, got %v", newModel.Screen)
@@ -633,7 +649,7 @@ func TestNvimSelectToAIToolsTransition(t *testing.T) {
 	}
 }
 
-func TestNvimSelectSkipToAITools(t *testing.T) {
+func TestNvimSelectSkipToZedSelect(t *testing.T) {
 	m := NewModel()
 	m.Screen = ScreenNvimSelect
 	m.Cursor = 1 // No, skip Neovim
@@ -644,8 +660,8 @@ func TestNvimSelectSkipToAITools(t *testing.T) {
 	if newModel.Choices.InstallNvim {
 		t.Error("Expected InstallNvim to be false")
 	}
-	if newModel.Screen != ScreenAIToolsSelect {
-		t.Errorf("Expected ScreenAIToolsSelect even when skipping nvim, got %v", newModel.Screen)
+	if newModel.Screen != ScreenZedSelect {
+		t.Errorf("Expected ScreenZedSelect even when skipping nvim, got %v", newModel.Screen)
 	}
 }
 
@@ -830,8 +846,8 @@ func TestAIToolsSelectGoBack(t *testing.T) {
 	result, _ := m.goBackInstallStep()
 	newModel := result.(Model)
 
-	if newModel.Screen != ScreenNvimSelect {
-		t.Errorf("Expected ScreenNvimSelect, got %v", newModel.Screen)
+	if newModel.Screen != ScreenZedSelect {
+		t.Errorf("Expected ScreenZedSelect, got %v", newModel.Screen)
 	}
 	if newModel.AIToolSelected != nil {
 		t.Error("Expected AIToolSelected to be cleared on back")
@@ -1805,8 +1821,8 @@ func TestGetScreenTitleOutOfBoundsCategory(t *testing.T) {
 	m.SelectedModuleCategory = -1
 
 	title := m.GetScreenTitle()
-	if !strings.Contains(title, "Step 8") {
-		t.Errorf("Expected fallback title with 'Step 8', got %q", title)
+	if !strings.Contains(title, "Step 9") {
+		t.Errorf("Expected fallback title with 'Step 9', got %q", title)
 	}
 	if strings.Contains(title, "Hooks") || strings.Contains(title, "Skills") {
 		t.Error("Fallback title should not contain a category name")
@@ -2060,8 +2076,8 @@ func TestAIToolsEscDelegatesToGoBack(t *testing.T) {
 	result, _ := m.handleAIToolsKeys("esc")
 	newModel := result.(Model)
 
-	if newModel.Screen != ScreenNvimSelect {
-		t.Errorf("Expected esc to go back to ScreenNvimSelect, got %v", newModel.Screen)
+	if newModel.Screen != ScreenZedSelect {
+		t.Errorf("Expected esc to go back to ScreenZedSelect, got %v", newModel.Screen)
 	}
 }
 

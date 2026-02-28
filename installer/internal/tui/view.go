@@ -51,7 +51,7 @@ func (m Model) View() string {
 		s.WriteString(m.renderMainMenu())
 	case ScreenLearnMenu:
 		s.WriteString(m.renderSelection())
-	case ScreenOSSelect, ScreenTerminalSelect, ScreenFontSelect, ScreenShellSelect, ScreenWMSelect, ScreenNvimSelect, ScreenAIFrameworkConfirm, ScreenAIFrameworkPreset, ScreenGhosttyWarning:
+	case ScreenOSSelect, ScreenTerminalSelect, ScreenFontSelect, ScreenShellSelect, ScreenWMSelect, ScreenNvimSelect, ScreenZedSelect, ScreenAIFrameworkConfirm, ScreenAIFrameworkPreset, ScreenGhosttyWarning:
 		s.WriteString(m.renderSelection())
 	case ScreenAIToolsSelect:
 		s.WriteString(m.renderAIToolSelection())
@@ -251,7 +251,7 @@ func (m Model) renderSelection() string {
 }
 
 func (m Model) renderStepProgress() string {
-	steps := []string{"OS", "Terminal", "Font", "Shell", "WM", "Nvim", "AI Tools", "Framework"}
+	steps := []string{"OS", "Terminal", "Font", "Shell", "WM", "Nvim", "Zed", "AI Tools", "Framework"}
 	currentIdx := 0
 
 	switch m.Screen {
@@ -267,10 +267,12 @@ func (m Model) renderStepProgress() string {
 		currentIdx = 4
 	case ScreenNvimSelect:
 		currentIdx = 5
-	case ScreenAIToolsSelect:
+	case ScreenZedSelect:
 		currentIdx = 6
-	case ScreenAIFrameworkConfirm, ScreenAIFrameworkPreset, ScreenAIFrameworkCategories, ScreenAIFrameworkCategoryItems:
+	case ScreenAIToolsSelect:
 		currentIdx = 7
+	case ScreenAIFrameworkConfirm, ScreenAIFrameworkPreset, ScreenAIFrameworkCategories, ScreenAIFrameworkCategoryItems:
+		currentIdx = 8
 	}
 
 	var parts []string

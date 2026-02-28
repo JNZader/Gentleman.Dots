@@ -345,6 +345,7 @@ func ConfigPaths() map[string]string {
 		"wezterm":   home + "/.wezterm.lua",
 		"kitty":     home + "/.config/kitty",
 		"ghostty":   home + "/.config/ghostty",
+		"zed":       home + "/.config/zed",
 		"starship":  home + "/.config/starship.toml",
 	}
 }

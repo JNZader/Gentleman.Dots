@@ -24,6 +24,7 @@ type cliFlags struct {
 	shell          string
 	windowMgr      string
 	nvim           bool
+	zed            bool
 	font           bool
 	backup         bool
 	aiTools          string
@@ -55,6 +56,7 @@ func parseFlags() *cliFlags {
 	flag.StringVar(&flags.shell, "shell", "", "Shell: fish, zsh, nushell")
 	flag.StringVar(&flags.windowMgr, "wm", "", "Window manager: tmux, zellij, none")
 	flag.BoolVar(&flags.nvim, "nvim", false, "Install Neovim configuration")
+	flag.BoolVar(&flags.zed, "zed", false, "Install Zed editor with config")
 	flag.BoolVar(&flags.font, "font", false, "Install Nerd Font")
 	flag.BoolVar(&flags.backup, "backup", true, "Backup existing configs (default: true)")
 	flag.StringVar(&flags.aiTools, "ai-tools", "", "AI tools: claude,opencode,gemini,copilot,codex (comma-separated)")
@@ -321,6 +323,7 @@ func runNonInteractive(flags *cliFlags) error {
 		Shell:                 shell,
 		WindowMgr:             wm,
 		InstallNvim:           flags.nvim,
+		InstallZed:            flags.zed,
 		InstallFont:           flags.font,
 		CreateBackup:          flags.backup,
 		AITools:               aiTools,
@@ -336,6 +339,7 @@ func runNonInteractive(flags *cliFlags) error {
 	fmt.Printf("  Shell:       %s\n", choices.Shell)
 	fmt.Printf("  Window Mgr:  %s\n", choices.WindowMgr)
 	fmt.Printf("  Neovim:      %v\n", choices.InstallNvim)
+	fmt.Printf("  Zed:         %v\n", choices.InstallZed)
 	fmt.Printf("  Font:        %v\n", choices.InstallFont)
 	fmt.Printf("  Backup:      %v\n", choices.CreateBackup)
 	if len(choices.AITools) > 0 {
@@ -406,6 +410,7 @@ Non-Interactive Options:
   --terminal=<term>    Terminal: alacritty, wezterm, kitty, ghostty, none
   --wm=<wm>            Window manager: tmux, zellij, none
   --nvim               Install Neovim configuration
+  --zed                Install Zed editor with config
   --font               Install Nerd Font
   --backup=false       Disable config backup (default: true)
 

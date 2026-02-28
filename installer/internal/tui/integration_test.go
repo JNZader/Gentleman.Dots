@@ -96,12 +96,25 @@ func TestFullInstallationFlow(t *testing.T) {
 		}
 
 		// Select "Yes" for Nvim (cursor at 0)
-		// This should go to AI Tools selection (non-Termux)
+		// This should go to Zed selection (non-Termux)
 		result, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 		m = result.(Model)
 
 		if !m.Choices.InstallNvim {
 			t.Fatal("Expected InstallNvim to be true")
+		}
+
+		if m.Screen != ScreenZedSelect {
+			t.Fatalf("Expected ScreenZedSelect, got %v", m.Screen)
+		}
+
+		// Select "Yes" for Zed (cursor at 0)
+		// This should go to AI Tools selection
+		result, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		m = result.(Model)
+
+		if !m.Choices.InstallZed {
+			t.Fatal("Expected InstallZed to be true")
 		}
 
 		if m.Screen != ScreenAIToolsSelect {

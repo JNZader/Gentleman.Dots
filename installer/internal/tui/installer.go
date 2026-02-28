@@ -67,6 +67,8 @@ func executeStep(stepID string, m *Model) error {
 		return stepInstallWM(m)
 	case "nvim":
 		return stepInstallNvim(m)
+	case "zed":
+		return stepInstallZed(m)
 	case "aitools":
 		return stepInstallAITools(m)
 	case "aiframework":
@@ -1076,6 +1078,69 @@ func stepInstallNvim(m *Model) error {
 	}
 
 	SendLog(stepID, "✓ Neovim configured with Gentleman setup")
+	return nil
+}
+
+func stepInstallZed(m *Model) error {
+	homeDir := os.Getenv("HOME")
+	repoDir := "Gentleman.Dots"
+	stepID := "zed"
+
+	// Skip on Termux — Zed requires GUI with Vulkan
+	if m.SystemInfo.IsTermux {
+		SendLog(stepID, "Skipping Zed on Termux (requires GUI with Vulkan)")
+		return nil
+	}
+
+	// Install Zed binary
+	if !system.CommandExists("zed") {
+		SendLog(stepID, "Installing Zed editor...")
+		var result *system.ExecResult
+		switch m.SystemInfo.OS {
+		case system.OSMac:
+			result = system.RunBrewWithLogs("install --cask zed", nil, func(line string) {
+				SendLog(stepID, line)
+			})
+		case system.OSArch:
+			result = system.RunSudoWithLogs("pacman -S --noconfirm zed", nil, func(line string) {
+				SendLog(stepID, line)
+			})
+		case system.OSDebian, system.OSLinux, system.OSFedora:
+			result = system.RunWithLogs("bash -c 'curl -f https://zed.dev/install.sh | sh'", nil, func(line string) {
+				SendLog(stepID, line)
+			})
+		default:
+			result = system.RunWithLogs("bash -c 'curl -f https://zed.dev/install.sh | sh'", nil, func(line string) {
+				SendLog(stepID, line)
+			})
+		}
+		if result != nil && result.Error != nil {
+			SendLog(stepID, "Warning: Zed install failed: "+result.Error.Error())
+			SendLog(stepID, "You can install Zed manually from https://zed.dev/download")
+		} else {
+			SendLog(stepID, "Zed binary installed")
+		}
+	} else {
+		SendLog(stepID, "Zed already installed")
+	}
+
+	// Copy config
+	SendLog(stepID, "Copying Zed configuration...")
+	zedDir := filepath.Join(homeDir, ".config", "zed")
+	if err := system.EnsureDir(zedDir); err != nil {
+		return wrapStepError("zed", "Install Zed",
+			"Failed to create Zed config directory",
+			err)
+	}
+
+	srcZed := filepath.Join(repoDir, "GentlemanZed", "zed")
+	if err := system.CopyDir(srcZed, zedDir); err != nil {
+		return wrapStepError("zed", "Install Zed",
+			"Failed to copy Zed configuration",
+			err)
+	}
+
+	SendLog(stepID, "✓ Zed configured with Gentleman setup")
 	return nil
 }
 

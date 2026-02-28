@@ -783,7 +783,7 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case ScreenMainMenu:
 		return m.handleMainMenuKeys(key)
 
-	case ScreenOSSelect, ScreenTerminalSelect, ScreenFontSelect, ScreenShellSelect, ScreenWMSelect, ScreenNvimSelect, ScreenAIFrameworkConfirm, ScreenAIFrameworkPreset, ScreenGhosttyWarning,
+	case ScreenOSSelect, ScreenTerminalSelect, ScreenFontSelect, ScreenShellSelect, ScreenWMSelect, ScreenNvimSelect, ScreenZedSelect, ScreenAIFrameworkConfirm, ScreenAIFrameworkPreset, ScreenGhosttyWarning,
 		ScreenProjectStack, ScreenProjectMemory, ScreenProjectObsidianInstall, ScreenProjectEngram, ScreenProjectCI, ScreenProjectConfirm, ScreenSkillMenu, ScreenLearnMenu:
 		return m.handleSelectionKeys(key)
 
@@ -908,7 +908,7 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m Model) handleEscape() (tea.Model, tea.Cmd) {
 	switch m.Screen {
 	// Installation wizard screens - go back through the flow
-	case ScreenOSSelect, ScreenTerminalSelect, ScreenFontSelect, ScreenShellSelect, ScreenWMSelect, ScreenNvimSelect, ScreenAIToolsSelect, ScreenAIFrameworkConfirm, ScreenAIFrameworkPreset, ScreenAIFrameworkCategories, ScreenAIFrameworkCategoryItems:
+	case ScreenOSSelect, ScreenTerminalSelect, ScreenFontSelect, ScreenShellSelect, ScreenWMSelect, ScreenNvimSelect, ScreenZedSelect, ScreenAIToolsSelect, ScreenAIFrameworkConfirm, ScreenAIFrameworkPreset, ScreenAIFrameworkCategories, ScreenAIFrameworkCategoryItems:
 		return m.goBackInstallStep()
 	case ScreenGhosttyWarning:
 		// Go back to terminal selection
@@ -1166,8 +1166,13 @@ func (m Model) goBackInstallStep() (tea.Model, tea.Cmd) {
 		m.Cursor = 0
 		m.Choices.InstallNvim = false
 
-	case ScreenAIToolsSelect:
+	case ScreenZedSelect:
 		m.Screen = ScreenNvimSelect
+		m.Cursor = 0
+		m.Choices.InstallZed = false
+
+	case ScreenAIToolsSelect:
+		m.Screen = ScreenZedSelect
 		m.Cursor = 0
 		m.Choices.AITools = nil
 		m.AIToolSelected = nil
@@ -1355,11 +1360,16 @@ func (m Model) handleSelection() (tea.Model, tea.Cmd) {
 
 	case ScreenNvimSelect:
 		m.Choices.InstallNvim = m.Cursor == 0
-		// Proceed to AI tools selection (skip on Termux)
+		// Proceed to Zed selection (skip on Termux — Zed needs GUI)
 		if m.SystemInfo.IsTermux {
-			// Termux doesn't support AI tools, skip to backup/install
+			// Termux doesn't support Zed or AI tools, skip to backup/install
 			return m.proceedToBackupOrInstall()
 		}
+		m.Screen = ScreenZedSelect
+		m.Cursor = 0
+
+	case ScreenZedSelect:
+		m.Choices.InstallZed = m.Cursor == 0
 		m.Screen = ScreenAIToolsSelect
 		m.Cursor = 0
 		m.AIToolSelected = make([]bool, len(aiToolIDMap))
