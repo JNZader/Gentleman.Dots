@@ -1133,7 +1133,7 @@ func stepInstallZed(m *Model) error {
 			err)
 	}
 
-	srcZed := filepath.Join(repoDir, "GentlemanZed", "zed")
+	srcZed := filepath.Join(repoDir, "GentlemanZed")
 	if err := system.CopyDir(srcZed, zedDir); err != nil {
 		return wrapStepError("zed", "Install Zed",
 			"Failed to copy Zed configuration",
