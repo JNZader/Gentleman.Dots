@@ -103,11 +103,11 @@ Custom is the **first option** (index 0), followed by a separator, then 6 preset
 
 ### Step 8c: Custom Category Drill-Down
 
-The custom selection uses a **two-level drill-down** instead of a flat checkbox list, making it possible to navigate 206 individual modules across 6 categories.
+The custom selection uses a **two-level drill-down** instead of a flat checkbox list, making it possible to navigate 209 individual modules across 7 categories.
 
 #### Category Menu (`ScreenAIFrameworkCategories`)
 
-Shows 6 categories with live selection counts. No checkboxes — cursor navigation only. Press `Enter` to drill into a category.
+Shows 7 categories with live selection counts. No checkboxes — cursor navigation only. Press `Enter` to drill into a category.
 
 ```
 ▸ 🪝 Hooks (2/10 selected)
@@ -115,6 +115,7 @@ Shows 6 categories with live selection counts. No checkboxes — cursor navigati
   🤖 Agents (3/80 selected)
   🎯 Skills (5/85 selected)
   📐 SDD (1/2 selected)
+  🧩 Plugins (1/3 selected)
   🔌 MCP (2/9 selected)
   ─────────────
   ✅ Confirm selection
@@ -211,7 +212,7 @@ gentleman.dots --non-interactive --shell=<shell> [AI options]
 | `--ai-tools=<tools>` | `claude,opencode,gemini,copilot` | AI tools (comma-separated) |
 | `--ai-framework` | | Install AI coding framework |
 | `--ai-preset=<name>` | `minimal,frontend,backend,fullstack,data,complete` | Framework preset |
-| `--ai-modules=<feats>` | `hooks,commands,skills,agents,sdd,mcp` | Feature flags (comma-separated) |
+| `--ai-modules=<feats>` | `hooks,commands,skills,agents,sdd,plugins,mcp` | Feature flags (comma-separated) |
 | `--agent-teams-lite` | | Install Agent Teams Lite SDD framework |
 
 ### Examples
@@ -238,7 +239,7 @@ gentleman.dots --dry-run --non-interactive --shell=zsh \
 
 - AI tools validated against: `{claude, opencode, gemini, copilot}`
 - Presets validated against: `{minimal, frontend, backend, fullstack, data, complete}`
-- Feature flags validated against: `{hooks, commands, skills, agents, sdd, mcp}`
+- Feature flags validated against: `{hooks, commands, skills, agents, sdd, plugins, mcp}`
 - Framework is auto-enabled if `--ai-preset`, `--ai-modules`, or `--agent-teams-lite` is provided
 
 ---
@@ -247,14 +248,14 @@ gentleman.dots --dry-run --non-interactive --shell=zsh \
 
 Each preset maps to a set of feature flags passed to `setup-global.sh --features=`:
 
-| Preset | hooks | commands | skills | agents | sdd | mcp |
-|--------|:-----:|:--------:|:------:|:------:|:---:|:---:|
-| **Minimal** | ✅ | ✅ | | | ✅ | |
-| **Frontend** | ✅ | ✅ | ✅ | ✅ | ✅ | |
-| **Backend** | ✅ | ✅ | ✅ | ✅ | ✅ | |
-| **Fullstack** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Data** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Complete** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Preset | hooks | commands | skills | agents | sdd | plugins | mcp |
+|--------|:-----:|:--------:|:------:|:------:|:---:|:-------:|:---:|
+| **Minimal** | ✅ | ✅ | | | ✅ | | |
+| **Frontend** | ✅ | ✅ | ✅ | ✅ | ✅ | | |
+| **Backend** | ✅ | ✅ | ✅ | ✅ | ✅ | | |
+| **Fullstack** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Data** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Complete** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 > **Note:** Presets install OpenSpec SDD by default (via the `sdd` feature). For Agent Teams Lite, use Custom mode or the `--agent-teams-lite` CLI flag.
 
