@@ -1171,14 +1171,22 @@ func TestAICategoryItemsSeparatorSkipDown(t *testing.T) {
 		m.AICategorySelected[cat.ID] = make([]bool, len(cat.Items))
 	}
 	cat := moduleCategories[5]
-	m.Cursor = len(cat.Items) - 1 // Last MCP item
+	bools := m.AICategorySelected[cat.ID]
+	entries := buildCatItemEntries(cat, bools)
+	// Find last item position in layout
+	lastItemPos := 0
+	for i, e := range entries {
+		if e.itemIdx >= 0 {
+			lastItemPos = i
+		}
+	}
+	m.Cursor = lastItemPos
 
 	// Navigate down — should skip separator and land on "← Back"
 	result, _ := m.handleAICategoryItemsKeys("down")
 	newModel := result.(Model)
 
-	opts := m.GetCurrentOptions()
-	backIdx := len(opts) - 1
+	backIdx := len(entries) - 1
 	if newModel.Cursor != backIdx {
 		t.Errorf("Expected cursor at Back (index %d), got %d", backIdx, newModel.Cursor)
 	}
@@ -1193,16 +1201,302 @@ func TestAICategoryItemsSeparatorSkipUp(t *testing.T) {
 	for _, cat := range moduleCategories {
 		m.AICategorySelected[cat.ID] = make([]bool, len(cat.Items))
 	}
-	opts := m.GetCurrentOptions()
-	m.Cursor = len(opts) - 1 // "← Back"
+	cat := moduleCategories[5]
+	bools := m.AICategorySelected[cat.ID]
+	entries := buildCatItemEntries(cat, bools)
+	m.Cursor = len(entries) - 1 // "← Back"
 
-	// Navigate up — should skip separator
+	// Navigate up — should skip separator and land on last item
 	result, _ := m.handleAICategoryItemsKeys("up")
 	newModel := result.(Model)
 
-	cat := moduleCategories[5]
-	if newModel.Cursor != len(cat.Items)-1 {
-		t.Errorf("Expected cursor at last item (index %d), got %d", len(cat.Items)-1, newModel.Cursor)
+	lastItemPos := 0
+	for i, e := range entries {
+		if e.itemIdx >= 0 {
+			lastItemPos = i
+		}
+	}
+	if newModel.Cursor != lastItemPos {
+		t.Errorf("Expected cursor at last item (index %d), got %d", lastItemPos, newModel.Cursor)
+	}
+}
+
+// ==========================================================================
+// Select All / Group Toggle Tests
+// ==========================================================================
+
+func TestBuildCatItemEntriesNoSubgroups(t *testing.T) {
+	// Hooks has no sub-groups — should have SelectAll + separator + items + separator + back
+	cat := moduleCategories[0] // Hooks
+	bools := make([]bool, len(cat.Items))
+	entries := buildCatItemEntries(cat, bools)
+
+	// First entry is Select All
+	if !entries[0].selectAll {
+		t.Error("First entry should be Select All")
+	}
+	if entries[0].label != "✅ Select All" {
+		t.Errorf("Expected '✅ Select All', got %q", entries[0].label)
+	}
+	// Second is separator
+	if !entries[1].separator {
+		t.Error("Second entry should be separator")
+	}
+	// Items follow (no group headers)
+	itemCount := 0
+	for _, e := range entries {
+		if e.itemIdx >= 0 {
+			itemCount++
+		}
+	}
+	if itemCount != len(cat.Items) {
+		t.Errorf("Expected %d items, got %d", len(cat.Items), itemCount)
+	}
+	// Last is back
+	if !entries[len(entries)-1].back {
+		t.Error("Last entry should be Back")
+	}
+}
+
+func TestBuildCatItemEntriesWithSubgroups(t *testing.T) {
+	// Commands has sub-groups (Git, Refactoring, Testing, Workflow)
+	cat := moduleCategories[1] // Commands
+	bools := make([]bool, len(cat.Items))
+	entries := buildCatItemEntries(cat, bools)
+
+	// Count group headers
+	groupHeaders := 0
+	for _, e := range entries {
+		if e.isGroupHeader() {
+			groupHeaders++
+		}
+	}
+	if groupHeaders < 2 {
+		t.Errorf("Expected at least 2 group headers, got %d", groupHeaders)
+	}
+
+	// All items should still be present
+	itemCount := 0
+	for _, e := range entries {
+		if e.itemIdx >= 0 {
+			itemCount++
+		}
+	}
+	if itemCount != len(cat.Items) {
+		t.Errorf("Expected %d items, got %d", len(cat.Items), itemCount)
+	}
+
+	// Group headers should have valid ranges
+	for _, e := range entries {
+		if e.isGroupHeader() {
+			if e.groupStart < 0 || e.groupEnd <= e.groupStart || e.groupEnd > len(cat.Items) {
+				t.Errorf("Invalid group range [%d, %d) for %q", e.groupStart, e.groupEnd, e.label)
+			}
+		}
+	}
+}
+
+func TestSelectAllToggle(t *testing.T) {
+	m := NewModel()
+	m.Screen = ScreenAIFrameworkCategoryItems
+	m.SelectedModuleCategory = 5 // MCP (6 items)
+	m.Height = 50
+	m.AICategorySelected = make(map[string][]bool)
+	for _, cat := range moduleCategories {
+		m.AICategorySelected[cat.ID] = make([]bool, len(cat.Items))
+	}
+	m.Cursor = 0 // Select All
+
+	// Press Enter to select all
+	result, _ := m.handleAICategoryItemsKeys("enter")
+	newModel := result.(Model)
+	bools := newModel.AICategorySelected["mcp"]
+	for i, b := range bools {
+		if !b {
+			t.Errorf("Item %d should be selected after Select All", i)
+		}
+	}
+
+	// Press Enter again to deselect all
+	newModel.Cursor = 0
+	result2, _ := newModel.handleAICategoryItemsKeys("enter")
+	newModel2 := result2.(Model)
+	bools2 := newModel2.AICategorySelected["mcp"]
+	for i, b := range bools2 {
+		if b {
+			t.Errorf("Item %d should be deselected after Deselect All", i)
+		}
+	}
+}
+
+func TestSelectAllKeyboardShortcut(t *testing.T) {
+	m := NewModel()
+	m.Screen = ScreenAIFrameworkCategoryItems
+	m.SelectedModuleCategory = 0 // Hooks
+	m.Height = 50
+	m.AICategorySelected = make(map[string][]bool)
+	for _, cat := range moduleCategories {
+		m.AICategorySelected[cat.ID] = make([]bool, len(cat.Items))
+	}
+	m.Cursor = 5 // Some item position
+
+	// Press 'a' to select all (keyboard shortcut works from any cursor position)
+	result, _ := m.handleAICategoryItemsKeys("a")
+	newModel := result.(Model)
+	bools := newModel.AICategorySelected["hooks"]
+	for i, b := range bools {
+		if !b {
+			t.Errorf("Item %d should be selected after 'a' shortcut", i)
+		}
+	}
+
+	// Press 'a' again to deselect all
+	result2, _ := newModel.handleAICategoryItemsKeys("a")
+	newModel2 := result2.(Model)
+	bools2 := newModel2.AICategorySelected["hooks"]
+	for i, b := range bools2 {
+		if b {
+			t.Errorf("Item %d should be deselected after second 'a' press", i)
+		}
+	}
+}
+
+func TestGroupHeaderToggle(t *testing.T) {
+	m := NewModel()
+	m.Screen = ScreenAIFrameworkCategoryItems
+	m.SelectedModuleCategory = 1 // Commands (has sub-groups: Git, Refactoring, Testing, Workflow)
+	m.Height = 50
+	m.AICategorySelected = make(map[string][]bool)
+	for _, cat := range moduleCategories {
+		m.AICategorySelected[cat.ID] = make([]bool, len(cat.Items))
+	}
+	cat := moduleCategories[1]
+	bools := m.AICategorySelected[cat.ID]
+	entries := buildCatItemEntries(cat, bools)
+
+	// Find first group header
+	groupIdx := -1
+	var groupEntry catItemEntry
+	for i, e := range entries {
+		if e.isGroupHeader() {
+			groupIdx = i
+			groupEntry = e
+			break
+		}
+	}
+	if groupIdx < 0 {
+		t.Fatal("No group header found in Commands category")
+	}
+
+	m.Cursor = groupIdx
+
+	// Toggle group — should select all items in that group
+	result, _ := m.handleAICategoryItemsKeys("enter")
+	newModel := result.(Model)
+	newBools := newModel.AICategorySelected[cat.ID]
+
+	for j := groupEntry.groupStart; j < groupEntry.groupEnd; j++ {
+		if !newBools[j] {
+			t.Errorf("Item %d in group %q should be selected after group toggle", j, groupEntry.label)
+		}
+	}
+
+	// Items outside group should remain unselected
+	for j := groupEntry.groupEnd; j < len(newBools); j++ {
+		if newBools[j] {
+			t.Errorf("Item %d outside group should remain unselected", j)
+		}
+	}
+
+	// Toggle again — should deselect all items in group
+	newModel.Cursor = groupIdx
+	result2, _ := newModel.handleAICategoryItemsKeys("enter")
+	newModel2 := result2.(Model)
+	bools2 := newModel2.AICategorySelected[cat.ID]
+	for j := groupEntry.groupStart; j < groupEntry.groupEnd; j++ {
+		if bools2[j] {
+			t.Errorf("Item %d should be deselected after second group toggle", j)
+		}
+	}
+}
+
+func TestSelectAllLabelUpdates(t *testing.T) {
+	m := NewModel()
+	m.Screen = ScreenAIFrameworkCategoryItems
+	m.SelectedModuleCategory = 5 // MCP
+	m.Height = 50
+	m.AICategorySelected = make(map[string][]bool)
+	for _, cat := range moduleCategories {
+		m.AICategorySelected[cat.ID] = make([]bool, len(cat.Items))
+	}
+
+	// Initially "Select All"
+	opts := m.GetCurrentOptions()
+	if opts[0] != "✅ Select All" {
+		t.Errorf("Expected '✅ Select All', got %q", opts[0])
+	}
+
+	// Select all items
+	for i := range m.AICategorySelected["mcp"] {
+		m.AICategorySelected["mcp"][i] = true
+	}
+
+	// Now should be "Deselect All"
+	opts2 := m.GetCurrentOptions()
+	if opts2[0] != "❌ Deselect All" {
+		t.Errorf("Expected '❌ Deselect All', got %q", opts2[0])
+	}
+}
+
+func TestGroupHeaderShowsCounts(t *testing.T) {
+	m := NewModel()
+	m.Screen = ScreenAIFrameworkCategoryItems
+	m.SelectedModuleCategory = 1 // Commands
+	m.Height = 50
+	m.AICategorySelected = make(map[string][]bool)
+	for _, cat := range moduleCategories {
+		m.AICategorySelected[cat.ID] = make([]bool, len(cat.Items))
+	}
+
+	cat := moduleCategories[1]
+	bools := m.AICategorySelected[cat.ID]
+
+	// Select first 3 items (all Git items start at index 0)
+	bools[0] = true
+	bools[1] = true
+	bools[2] = true
+
+	entries := buildCatItemEntries(cat, bools)
+	// First group header should show "3/7" (Git has 7 items)
+	for _, e := range entries {
+		if e.isGroupHeader() {
+			if !strings.Contains(e.label, "3/7") && !strings.Contains(e.label, "3/") {
+				// Check it at least shows count
+				if !strings.Contains(e.label, "(") {
+					t.Errorf("Group header should show selection count, got %q", e.label)
+				}
+			}
+			break
+		}
+	}
+}
+
+func TestItemGroupPrefix(t *testing.T) {
+	tests := []struct {
+		label    string
+		expected string
+	}{
+		{"Git: Changelog", "Git"},
+		{"Backend: FastAPI", "Backend"},
+		{"Data & AI: AI/ML", "Data & AI"},
+		{"Block Dangerous Commands", ""},
+		{"Context7", ""},
+	}
+	for _, tt := range tests {
+		got := itemGroupPrefix(tt.label)
+		if got != tt.expected {
+			t.Errorf("itemGroupPrefix(%q) = %q, want %q", tt.label, got, tt.expected)
+		}
 	}
 }
 

@@ -394,24 +394,23 @@ func (m Model) renderAICategoryItems() string {
 		return s.String()
 	}
 	cat := moduleCategories[m.SelectedModuleCategory]
-
-	// Options with checkboxes — with viewport scrolling for long lists
-	options := m.GetCurrentOptions()
+	bools := m.AICategorySelected[cat.ID]
+	entries := buildCatItemEntries(cat, bools)
 
 	// Calculate visible area: reserve lines for progress(1)+blank(1)+title(1)+desc(1)+blank(1)+scroll(1)+blank(1)+help(1) = 8
 	visibleItems := m.Height - 8
 	if visibleItems < 5 {
 		visibleItems = 5
 	}
-	if visibleItems > len(options) {
-		visibleItems = len(options)
+	if visibleItems > len(entries) {
+		visibleItems = len(entries)
 	}
 
 	// Calculate scroll window around cursor
 	start := m.CategoryItemsScroll
 	end := start + visibleItems
-	if end > len(options) {
-		end = len(options)
+	if end > len(entries) {
+		end = len(entries)
 		start = end - visibleItems
 		if start < 0 {
 			start = 0
@@ -425,9 +424,10 @@ func (m Model) renderAICategoryItems() string {
 	}
 
 	for i := start; i < end; i++ {
-		opt := options[i]
-		if strings.HasPrefix(opt, "───") {
-			s.WriteString(MutedStyle.Render(opt))
+		entry := entries[i]
+
+		if entry.separator {
+			s.WriteString(MutedStyle.Render(entry.label))
 			s.WriteString("\n")
 			continue
 		}
@@ -439,29 +439,28 @@ func (m Model) renderAICategoryItems() string {
 			style = SelectedStyle
 		}
 
-		// Show checkbox for toggleable items
-		checkbox := "[ ] "
-		if bools, ok := m.AICategorySelected[cat.ID]; ok && i < len(bools) && bools[i] {
-			checkbox = "[✓] "
+		// Checkboxes only for regular items (not select all, group headers, or back)
+		checkbox := ""
+		if entry.itemIdx >= 0 {
+			if entry.itemIdx < len(bools) && bools[entry.itemIdx] {
+				checkbox = "[✓] "
+			} else {
+				checkbox = "[ ] "
+			}
 		}
 
-		// "← Back" doesn't get a checkbox
-		if strings.HasPrefix(opt, "←") || strings.HasPrefix(opt, "✅") {
-			checkbox = ""
-		}
-
-		s.WriteString(style.Render(cursor + checkbox + opt))
+		s.WriteString(style.Render(cursor + checkbox + entry.label))
 		s.WriteString("\n")
 	}
 
 	// Show scroll-down indicator
-	if end < len(options) {
-		s.WriteString(MutedStyle.Render(fmt.Sprintf("  ▼ %d more below", len(options)-end)))
+	if end < len(entries) {
+		s.WriteString(MutedStyle.Render(fmt.Sprintf("  ▼ %d more below", len(entries)-end)))
 		s.WriteString("\n")
 	}
 
 	s.WriteString("\n")
-	s.WriteString(HelpStyle.Render("↑/k up • ↓/j down • [Enter] toggle/back • [Esc] back"))
+	s.WriteString(HelpStyle.Render("↑/k up • ↓/j down • [a] select all • [Enter] toggle/back • [Esc] back"))
 
 	return s.String()
 }

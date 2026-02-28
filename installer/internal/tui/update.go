@@ -1406,6 +1406,101 @@ var moduleCategories = []ModuleCategory{
 	},
 }
 
+// catItemEntry represents a single entry in the category items screen layout.
+// It maps cursor positions to actions (select all, group toggle, item toggle, back).
+type catItemEntry struct {
+	label      string
+	itemIdx    int  // index into bools[] for regular items; -1 otherwise
+	selectAll  bool // true for the "Select All" / "Deselect All" entry
+	groupStart int  // for group headers: first bools[] index (inclusive)
+	groupEnd   int  // for group headers: last bools[] index (exclusive)
+	separator  bool
+	back       bool
+}
+
+// isGroupHeader returns true if this entry toggles a group of items.
+func (e catItemEntry) isGroupHeader() bool {
+	return e.groupEnd > e.groupStart && !e.selectAll
+}
+
+// itemGroupPrefix extracts the group prefix from an item label (text before ": ").
+func itemGroupPrefix(label string) string {
+	if idx := strings.Index(label, ": "); idx > 0 {
+		return label[:idx]
+	}
+	return ""
+}
+
+// buildCatItemEntries builds the layout for a category items screen, inserting
+// "Select All" at the top and group headers for categories with sub-groups.
+func buildCatItemEntries(cat ModuleCategory, bools []bool) []catItemEntry {
+	var entries []catItemEntry
+
+	// 1. Select All / Deselect All
+	allSelected := len(bools) > 0
+	for _, b := range bools {
+		if !b {
+			allSelected = false
+			break
+		}
+	}
+	selectLabel := "✅ Select All"
+	if allSelected {
+		selectLabel = "❌ Deselect All"
+	}
+	entries = append(entries, catItemEntry{label: selectLabel, itemIdx: -1, selectAll: true})
+	entries = append(entries, catItemEntry{label: "─────────────", itemIdx: -1, separator: true})
+
+	// 2. Detect sub-groups from label prefixes
+	seenGroups := make(map[string]bool)
+	groupCount := 0
+	for _, item := range cat.Items {
+		g := itemGroupPrefix(item.Label)
+		if g != "" && !seenGroups[g] {
+			seenGroups[g] = true
+			groupCount++
+		}
+	}
+
+	// 3. Build item entries (with or without group headers)
+	if groupCount > 1 {
+		currentGroup := ""
+		for i, item := range cat.Items {
+			group := itemGroupPrefix(item.Label)
+			if group != currentGroup {
+				currentGroup = group
+				// Find group boundaries
+				gStart := i
+				gEnd := i + 1
+				for gEnd < len(cat.Items) && itemGroupPrefix(cat.Items[gEnd].Label) == group {
+					gEnd++
+				}
+				// Count selected in group
+				selected := 0
+				for j := gStart; j < gEnd && j < len(bools); j++ {
+					if bools[j] {
+						selected++
+					}
+				}
+				gLabel := fmt.Sprintf("📂 %s (%d/%d)", group, selected, gEnd-gStart)
+				entries = append(entries, catItemEntry{
+					label: gLabel, itemIdx: -1,
+					groupStart: gStart, groupEnd: gEnd,
+				})
+			}
+			entries = append(entries, catItemEntry{label: item.Label, itemIdx: i})
+		}
+	} else {
+		for i, item := range cat.Items {
+			entries = append(entries, catItemEntry{label: item.Label, itemIdx: i})
+		}
+	}
+
+	entries = append(entries, catItemEntry{label: "─────────────", itemIdx: -1, separator: true})
+	entries = append(entries, catItemEntry{label: "← Back", itemIdx: -1, back: true})
+	return entries
+}
+
 // collectSelectedFeatures converts the category selection map into feature flags for setup-global.sh.
 // If ANY item within a category is selected, the category's feature flag is included.
 // setup-global.sh operates at the feature level: --features=hooks,skills,agents,sdd,mcp
@@ -1559,41 +1654,44 @@ func (m Model) handleAICategoryItemsKeys(key string) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	cat := moduleCategories[m.SelectedModuleCategory]
-	options := m.GetCurrentOptions()
-	lastItemIdx := len(cat.Items) - 1
-	backIdx := len(options) - 1
+	bools := m.AICategorySelected[cat.ID]
+	entries := buildCatItemEntries(cat, bools)
 
 	switch key {
 	case "up", "k":
 		if m.Cursor > 0 {
 			m.Cursor--
-			if strings.HasPrefix(options[m.Cursor], "───") && m.Cursor > 0 {
+			if m.Cursor < len(entries) && entries[m.Cursor].separator && m.Cursor > 0 {
 				m.Cursor--
 			}
 		}
 	case "down", "j":
-		if m.Cursor < len(options)-1 {
+		if m.Cursor < len(entries)-1 {
 			m.Cursor++
-			if strings.HasPrefix(options[m.Cursor], "───") && m.Cursor < len(options)-1 {
+			if m.Cursor < len(entries) && entries[m.Cursor].separator && m.Cursor < len(entries)-1 {
 				m.Cursor++
 			}
 		}
+	case "a":
+		// Shortcut: toggle all items
+		m.toggleAllCategoryItems(cat.ID, bools)
 	case "enter", " ":
-		if m.Cursor <= lastItemIdx {
-			// Toggle item within category
-			bools := m.AICategorySelected[cat.ID]
-			if bools != nil && m.Cursor < len(bools) {
-				bools[m.Cursor] = !bools[m.Cursor]
+		if m.Cursor < len(entries) {
+			entry := entries[m.Cursor]
+			if entry.selectAll {
+				m.toggleAllCategoryItems(cat.ID, bools)
+			} else if entry.isGroupHeader() {
+				m.toggleGroupItems(cat.ID, bools, entry.groupStart, entry.groupEnd)
+			} else if entry.itemIdx >= 0 && entry.itemIdx < len(bools) {
+				bools[entry.itemIdx] = !bools[entry.itemIdx]
 				m.AICategorySelected[cat.ID] = bools
+			} else if entry.back {
+				m.Screen = ScreenAIFrameworkCategories
+				m.Cursor = m.SelectedModuleCategory
+				m.CategoryItemsScroll = 0
 			}
-		} else if m.Cursor == backIdx {
-			// Back to categories — restore cursor to this category
-			m.Screen = ScreenAIFrameworkCategories
-			m.Cursor = m.SelectedModuleCategory
-			m.CategoryItemsScroll = 0
 		}
 	case "esc", "backspace":
-		// Back to categories — restore cursor to this category
 		m.Screen = ScreenAIFrameworkCategories
 		m.Cursor = m.SelectedModuleCategory
 		m.CategoryItemsScroll = 0
@@ -1612,6 +1710,36 @@ func (m Model) handleAICategoryItemsKeys(key string) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+// toggleAllCategoryItems selects all items if any are unselected, or deselects all if all are selected.
+func (m *Model) toggleAllCategoryItems(catID string, bools []bool) {
+	allSelected := len(bools) > 0
+	for _, b := range bools {
+		if !b {
+			allSelected = false
+			break
+		}
+	}
+	for i := range bools {
+		bools[i] = !allSelected
+	}
+	m.AICategorySelected[catID] = bools
+}
+
+// toggleGroupItems selects all items in [start, end) if any are unselected, or deselects all.
+func (m *Model) toggleGroupItems(catID string, bools []bool, start, end int) {
+	allGroupSelected := true
+	for j := start; j < end && j < len(bools); j++ {
+		if !bools[j] {
+			allGroupSelected = false
+			break
+		}
+	}
+	for j := start; j < end && j < len(bools); j++ {
+		bools[j] = !allGroupSelected
+	}
+	m.AICategorySelected[catID] = bools
 }
 
 func (m Model) handleLearnMenuKeys(key string) (tea.Model, tea.Cmd) {

@@ -402,12 +402,12 @@ func (m Model) GetCurrentOptions() []string {
 			return []string{}
 		}
 		cat := moduleCategories[m.SelectedModuleCategory]
-		opts := make([]string, 0, len(cat.Items)+2)
-		for _, item := range cat.Items {
-			opts = append(opts, item.Label)
+		bools := m.AICategorySelected[cat.ID]
+		entries := buildCatItemEntries(cat, bools)
+		opts := make([]string, len(entries))
+		for i, e := range entries {
+			opts[i] = e.label
 		}
-		opts = append(opts, "─────────────")
-		opts = append(opts, "← Back")
 		return opts
 	case ScreenBackupConfirm:
 		return []string{
