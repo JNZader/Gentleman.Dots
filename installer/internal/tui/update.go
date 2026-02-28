@@ -57,13 +57,15 @@ type (
 
 	// Skill manager messages
 	skillsLoadedMsg struct {
-		available []string
-		installed []string
-		err       error
+		skills []SkillInfo
+		err    error
 	}
 	skillActionCompleteMsg struct {
 		logLines []string
 		err      error
+	}
+	skillUpdateCompleteMsg struct {
+		err error
 	}
 )
 
@@ -139,7 +141,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tickMsg:
 		// Animate spinner during installation
-		if m.Screen == ScreenInstalling || m.Screen == ScreenProjectInstalling || m.SkillLoading {
+		if m.Screen == ScreenInstalling || m.Screen == ScreenProjectInstalling || m.Screen == ScreenSkillUpdate || m.SkillLoading {
 			m.SpinnerFrame++
 		}
 		// Continue ticking for animations
@@ -237,17 +239,26 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			m.SkillLoadError = msg.err.Error()
 		} else {
-			if msg.available != nil {
-				m.SkillList = msg.available
-			}
-			m.InstalledSkills = msg.installed
-			// Initialize selection booleans
+			m.SkillCatalog = msg.skills
+			// Initialize selection booleans based on current screen
 			if m.Screen == ScreenSkillInstall {
-				m.SkillSelected = make([]bool, len(m.SkillList))
+				notInstalled := m.getNotInstalledSkills()
+				m.SkillSelected = make([]bool, len(notInstalled))
 			} else if m.Screen == ScreenSkillRemove {
-				m.SkillSelected = make([]bool, len(m.InstalledSkills))
+				installed := m.getInstalledSkills()
+				m.SkillSelected = make([]bool, len(installed))
 			}
 		}
+		return m, nil
+
+	case skillUpdateCompleteMsg:
+		m.SkillLoading = false
+		if msg.err != nil {
+			m.SkillLoadError = msg.err.Error()
+		} else {
+			m.SkillResultLog = []string{"✅ Catalog updated successfully"}
+		}
+		m.Screen = ScreenSkillResult
 		return m, nil
 
 	case skillActionCompleteMsg:
@@ -292,67 +303,280 @@ func (m Model) runProjectInit() tea.Cmd {
 // loadSkillsCmd returns a tea.Cmd that fetches the skill catalog
 func loadSkillsCmd() tea.Cmd {
 	return func() tea.Msg {
-		available, installed, err := fetchSkillCatalog()
-		return skillsLoadedMsg{available: available, installed: installed, err: err}
+		skills, err := fetchSkillCatalog()
+		return skillsLoadedMsg{skills: skills, err: err}
 	}
 }
 
-// loadInstalledSkillsCmd returns a tea.Cmd that fetches only installed skills
-func loadInstalledSkillsCmd() tea.Cmd {
-	return func() tea.Msg {
-		_, installed, err := fetchSkillCatalog()
-		return skillsLoadedMsg{available: nil, installed: installed, err: err}
-	}
-}
-
-// fetchSkillCatalog clones the Gentleman-Skills repo and reads skill directories
-func fetchSkillCatalog() ([]string, []string, error) {
-	cacheDir := filepath.Join(os.TempDir(), "gentleman-skills-cache")
-	// Check cache freshness (1 hour)
-	if info, err := os.Stat(cacheDir); err == nil {
-		if time.Since(info.ModTime()) < time.Hour {
-			return readSkillDirs(cacheDir)
-		}
-		os.RemoveAll(cacheDir)
-	}
-	// Clone
-	cmd := exec.Command("git", "clone", "--depth", "1", "https://github.com/Gentleman-Programming/Gentleman-Skills.git", cacheDir)
-	if err := cmd.Run(); err != nil {
-		return nil, nil, fmt.Errorf("failed to clone skills repo: %w", err)
-	}
-	return readSkillDirs(cacheDir)
-}
-
-// readSkillDirs reads available and installed skill directories
-func readSkillDirs(cacheDir string) ([]string, []string, error) {
-	var available []string
-	entries, err := os.ReadDir(cacheDir)
+// fetchSkillCatalog reads the centralized skills directory and returns SkillInfo for each skill.
+// Source: ~/.gentleman/skills/ (cloned by setupCentralizedSkills or on-demand here).
+func fetchSkillCatalog() ([]SkillInfo, error) {
+	home, err := os.UserHomeDir()
 	if err != nil {
-		return nil, nil, err
+		return nil, fmt.Errorf("cannot determine home directory: %w", err)
 	}
-	for _, e := range entries {
-		if e.IsDir() && !strings.HasPrefix(e.Name(), ".") {
-			available = append(available, e.Name())
+	centralDir := filepath.Join(home, ".gentleman", "skills")
+
+	// If central dir doesn't exist, clone it
+	if _, err := os.Stat(centralDir); os.IsNotExist(err) {
+		os.MkdirAll(filepath.Join(home, ".gentleman"), 0755)
+		cmd := exec.Command("git", "clone", "--depth", "1",
+			"https://github.com/Gentleman-Programming/Gentleman-Skills.git", centralDir)
+		if err := cmd.Run(); err != nil {
+			return nil, fmt.Errorf("failed to clone skills repo: %w", err)
 		}
 	}
-	// Read installed skills from home directory
-	var installed []string
-	home, _ := os.UserHomeDir()
-	skillsDir := filepath.Join(home, ".claude", "skills")
-	if entries, err := os.ReadDir(skillsDir); err == nil {
-		for _, e := range entries {
-			if e.IsDir() {
-				installed = append(installed, e.Name())
+
+	// Scan curated/ and community/ subdirs
+	var skills []SkillInfo
+	for _, category := range []string{"curated", "community"} {
+		dir := filepath.Join(centralDir, category)
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
+		for _, entry := range entries {
+			if !entry.IsDir() {
+				continue
+			}
+			skillDir := filepath.Join(dir, entry.Name())
+			skillFile := filepath.Join(skillDir, "SKILL.md")
+			if _, err := os.Stat(skillFile); err != nil {
+				continue
+			}
+
+			// Parse frontmatter
+			name, desc := parseSkillFrontmatter(skillFile)
+			if name == "" {
+				name = entry.Name()
+			}
+
+			// Check installed status in both ~/.claude/skills/ and ~/.agents/skills/
+			installed := isSkillInstalled(home, name)
+
+			skills = append(skills, SkillInfo{
+				Name:        name,
+				Description: desc,
+				Category:    category,
+				DirName:     entry.Name(),
+				FullPath:    skillDir,
+				Installed:   installed,
+			})
+		}
+	}
+
+	return skills, nil
+}
+
+// parseSkillFrontmatter does simple line-by-line parsing of SKILL.md YAML frontmatter.
+// Extracts "name:" and "description:" fields.
+func parseSkillFrontmatter(path string) (name, description string) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", ""
+	}
+	lines := strings.Split(string(data), "\n")
+	if len(lines) == 0 || strings.TrimSpace(lines[0]) != "---" {
+		return "", ""
+	}
+
+	inFrontmatter := true
+	inDescription := false
+	var descLines []string
+
+	for _, line := range lines[1:] {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "---" {
+			break
+		}
+		if !inFrontmatter {
+			break
+		}
+
+		// Check if this is a new top-level key (not indented or starts with a key)
+		if !strings.HasPrefix(line, " ") && !strings.HasPrefix(line, "\t") && strings.Contains(line, ":") {
+			inDescription = false
+		}
+
+		if strings.HasPrefix(trimmed, "name:") {
+			name = strings.TrimSpace(strings.TrimPrefix(trimmed, "name:"))
+			inDescription = false
+		} else if strings.HasPrefix(trimmed, "description:") {
+			rest := strings.TrimSpace(strings.TrimPrefix(trimmed, "description:"))
+			if rest == ">" || rest == "|" {
+				// Multi-line scalar, collect following indented lines
+				inDescription = true
+			} else {
+				descLines = append(descLines, rest)
+			}
+		} else if inDescription {
+			// Continuation of multi-line description (indented lines)
+			if strings.HasPrefix(line, " ") || strings.HasPrefix(line, "\t") {
+				descLines = append(descLines, trimmed)
+			} else {
+				inDescription = false
 			}
 		}
 	}
-	return available, installed, nil
+
+	// Take only first line of description for display
+	if len(descLines) > 0 {
+		description = descLines[0]
+	}
+	return name, description
 }
 
-// runSkillActionCmd returns a tea.Cmd that runs skill install/remove actions
-func runSkillActionCmd(action string, names []string) tea.Cmd {
+// isSkillInstalled checks if a skill symlink/dir exists in ~/.claude/skills/ OR ~/.agents/skills/
+func isSkillInstalled(home, name string) bool {
+	paths := []string{
+		filepath.Join(home, ".claude", "skills", name),
+		filepath.Join(home, ".agents", "skills", name),
+	}
+	for _, p := range paths {
+		if _, err := os.Stat(p); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
+// installSkillSymlinks creates symlinks for each skill into ~/.claude/skills/ and ~/.agents/skills/
+func installSkillSymlinks(skills []SkillInfo) ([]string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("cannot determine home directory: %w", err)
+	}
+
+	claudeSkillsDir := filepath.Join(home, ".claude", "skills")
+	agentsSkillsDir := filepath.Join(home, ".agents", "skills")
+	os.MkdirAll(claudeSkillsDir, 0755)
+	os.MkdirAll(agentsSkillsDir, 0755)
+
+	var logLines []string
+	var errors []string
+
+	for _, s := range skills {
+		// Symlink to ~/.claude/skills/<name>
+		claudeDst := filepath.Join(claudeSkillsDir, s.Name)
+		os.RemoveAll(claudeDst)
+		if err := os.Symlink(s.FullPath, claudeDst); err != nil {
+			logLines = append(logLines, fmt.Sprintf("❌ %s → ~/.claude/skills/: %v", s.Name, err))
+			errors = append(errors, s.Name)
+		} else {
+			logLines = append(logLines, fmt.Sprintf("✅ %s → ~/.claude/skills/", s.Name))
+		}
+
+		// Symlink to ~/.agents/skills/<name>
+		agentsDst := filepath.Join(agentsSkillsDir, s.Name)
+		os.RemoveAll(agentsDst)
+		if err := os.Symlink(s.FullPath, agentsDst); err != nil {
+			logLines = append(logLines, fmt.Sprintf("❌ %s → ~/.agents/skills/: %v", s.Name, err))
+			errors = append(errors, s.Name)
+		} else {
+			logLines = append(logLines, fmt.Sprintf("✅ %s → ~/.agents/skills/", s.Name))
+		}
+	}
+
+	if len(errors) > 0 {
+		return logLines, fmt.Errorf("%d symlink(s) failed", len(errors))
+	}
+	return logLines, nil
+}
+
+// InstallSkillSymlinks exposes installSkillSymlinks for CLI usage
+func InstallSkillSymlinks(skills []SkillInfo) ([]string, error) {
+	return installSkillSymlinks(skills)
+}
+
+// removeSkillSymlinks removes symlinks from ~/.claude/skills/ and ~/.agents/skills/
+func removeSkillSymlinks(skills []SkillInfo) ([]string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("cannot determine home directory: %w", err)
+	}
+
+	claudeSkillsDir := filepath.Join(home, ".claude", "skills")
+	agentsSkillsDir := filepath.Join(home, ".agents", "skills")
+
+	var logLines []string
+	var errors []string
+
+	for _, s := range skills {
+		removed := false
+		// Remove from ~/.claude/skills/<name>
+		claudeDst := filepath.Join(claudeSkillsDir, s.Name)
+		if _, err := os.Lstat(claudeDst); err == nil {
+			if err := os.RemoveAll(claudeDst); err != nil {
+				logLines = append(logLines, fmt.Sprintf("❌ %s: failed to remove from ~/.claude/skills/: %v", s.Name, err))
+				errors = append(errors, s.Name)
+			} else {
+				removed = true
+			}
+		}
+
+		// Remove from ~/.agents/skills/<name>
+		agentsDst := filepath.Join(agentsSkillsDir, s.Name)
+		if _, err := os.Lstat(agentsDst); err == nil {
+			if err := os.RemoveAll(agentsDst); err != nil {
+				logLines = append(logLines, fmt.Sprintf("❌ %s: failed to remove from ~/.agents/skills/: %v", s.Name, err))
+				errors = append(errors, s.Name)
+			} else {
+				removed = true
+			}
+		}
+
+		if removed {
+			logLines = append(logLines, fmt.Sprintf("✅ %s removed", s.Name))
+		}
+	}
+
+	if len(errors) > 0 {
+		return logLines, fmt.Errorf("%d removal(s) failed", len(errors))
+	}
+	return logLines, nil
+}
+
+// RemoveSkillSymlinks exposes removeSkillSymlinks for CLI usage
+func RemoveSkillSymlinks(skills []SkillInfo) ([]string, error) {
+	return removeSkillSymlinks(skills)
+}
+
+// FetchSkillCatalog exposes fetchSkillCatalog for CLI usage
+func FetchSkillCatalog() ([]SkillInfo, error) {
+	return fetchSkillCatalog()
+}
+
+// updateSkillCatalogCmd returns a tea.Cmd that runs git pull on ~/.gentleman/skills/
+func updateSkillCatalogCmd() tea.Cmd {
 	return func() tea.Msg {
-		logLines, err := runSkillAction(action, names)
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return skillUpdateCompleteMsg{err: err}
+		}
+		centralDir := filepath.Join(home, ".gentleman", "skills")
+		if _, err := os.Stat(centralDir); os.IsNotExist(err) {
+			return skillUpdateCompleteMsg{err: fmt.Errorf("skills catalog not found; browse or install first")}
+		}
+		cmd := exec.Command("git", "-C", centralDir, "pull")
+		if err := cmd.Run(); err != nil {
+			return skillUpdateCompleteMsg{err: fmt.Errorf("git pull failed: %w", err)}
+		}
+		return skillUpdateCompleteMsg{err: nil}
+	}
+}
+
+// installSkillActionCmd returns a tea.Cmd that installs skills via symlinks
+func installSkillActionCmd(skills []SkillInfo) tea.Cmd {
+	return func() tea.Msg {
+		logLines, err := installSkillSymlinks(skills)
+		return skillActionCompleteMsg{logLines: logLines, err: err}
+	}
+}
+
+// removeSkillActionCmd returns a tea.Cmd that removes skill symlinks
+func removeSkillActionCmd(skills []SkillInfo) tea.Cmd {
+	return func() tea.Msg {
+		logLines, err := removeSkillSymlinks(skills)
 		return skillActionCompleteMsg{logLines: logLines, err: err}
 	}
 }
@@ -409,6 +633,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case ScreenTrainerLesson, ScreenTrainerPractice, ScreenTrainerBoss:
 			// Trainer input screens: space is part of the input, pass through
 			// (handled below in screen-specific handlers)
+		case ScreenSkillInstall, ScreenSkillRemove:
+			// Skill multi-select screens: space toggles selection, pass through
 		default:
 			// All other screens: activate leader mode
 			m.LeaderMode = true
@@ -644,6 +870,9 @@ func (m Model) handleEscape() (tea.Model, tea.Cmd) {
 		m.Cursor = 0
 		m.SkillScroll = 0
 	case ScreenSkillResult:
+		m.Screen = ScreenSkillMenu
+		m.Cursor = 0
+	case ScreenSkillUpdate:
 		m.Screen = ScreenSkillMenu
 		m.Cursor = 0
 	// Main menu - quit
@@ -1078,8 +1307,15 @@ func (m Model) handleSelection() (tea.Model, tea.Cmd) {
 			m.Screen = ScreenSkillRemove
 			m.Cursor = 0
 			m.SkillScroll = 0
-			return m, loadInstalledSkillsCmd()
-		case 4: // Back (after separator at 3)
+			return m, loadSkillsCmd()
+		case 3: // Update Catalog
+			m.SkillLoading = true
+			m.SkillLoadError = ""
+			m.SkillResultLog = nil
+			m.ErrorMsg = ""
+			m.Screen = ScreenSkillUpdate
+			return m, updateSkillCatalogCmd()
+		case 5: // Back (after separator at 4)
 			m.Screen = ScreenMainMenu
 			m.Cursor = 0
 		}
@@ -2838,13 +3074,43 @@ func (m Model) handleProjectPathKeys(key string) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// handleSkillBrowseKeys handles the skill browse screen (read-only scroll)
+// isSkillGroupHeader returns true if the option text is a group header or separator
+func isSkillGroupHeader(opt string) bool {
+	return strings.HasPrefix(opt, "📦") || strings.HasPrefix(opt, "🌐") ||
+		strings.HasPrefix(opt, "───") || strings.HasPrefix(opt, "✅ Select All")
+}
+
+// skillOptionToIndex maps a cursor position in the options list to an index into SkillSelected.
+// Returns -1 if the cursor is on a non-skill item (header, separator, Select All, Confirm, Back).
+func skillOptionToIndex(options []string, cursor int) int {
+	if cursor < 0 || cursor >= len(options) {
+		return -1
+	}
+	opt := options[cursor]
+	if isSkillGroupHeader(opt) || strings.HasPrefix(opt, "───") ||
+		strings.Contains(opt, "Confirm") || strings.Contains(opt, "Back") {
+		return -1
+	}
+	// Count actual skill items before this cursor position
+	idx := 0
+	for i := 0; i < cursor; i++ {
+		o := options[i]
+		if !isSkillGroupHeader(o) && !strings.HasPrefix(o, "───") &&
+			!strings.Contains(o, "Confirm") && !strings.Contains(o, "Back") {
+			idx++
+		}
+	}
+	return idx
+}
+
+// handleSkillBrowseKeys handles the skill browse screen (read-only scroll with viewport)
 func (m Model) handleSkillBrowseKeys(key string) (tea.Model, tea.Cmd) {
 	options := m.GetCurrentOptions()
 	switch key {
 	case "up", "k":
 		if m.Cursor > 0 {
 			m.Cursor--
+			// Skip separator lines
 			if m.Cursor < len(options) && strings.HasPrefix(options[m.Cursor], "───") {
 				if m.Cursor > 0 {
 					m.Cursor--
@@ -2867,12 +3133,18 @@ func (m Model) handleSkillBrowseKeys(key string) (tea.Model, tea.Cmd) {
 			m.SkillScroll = 0
 		}
 	}
+
+	// Keep scroll in sync with cursor
+	m.updateSkillScroll(len(options))
+
 	return m, nil
 }
 
 // handleSkillInstallKeys handles multi-select for skill installation
 func (m Model) handleSkillInstallKeys(key string) (tea.Model, tea.Cmd) {
 	options := m.GetCurrentOptions()
+	notInstalled := m.getNotInstalledSkills()
+
 	switch key {
 	case "up", "k":
 		if m.Cursor > 0 {
@@ -2892,34 +3164,57 @@ func (m Model) handleSkillInstallKeys(key string) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
-	case "enter":
-		if m.Cursor < len(m.SkillList) && m.Cursor < len(m.SkillSelected) {
-			// Toggle selection
-			m.SkillSelected[m.Cursor] = !m.SkillSelected[m.Cursor]
-		} else if m.Cursor < len(options) && strings.Contains(options[m.Cursor], "Confirm") {
-			// Collect selected skills
-			var selected []string
-			for i, sel := range m.SkillSelected {
-				if sel && i < len(m.SkillList) {
-					selected = append(selected, m.SkillList[i])
+	case "enter", " ":
+		if m.Cursor < len(options) {
+			opt := options[m.Cursor]
+			if strings.HasPrefix(opt, "✅ Select All") {
+				// Toggle all
+				allSelected := true
+				for _, sel := range m.SkillSelected {
+					if !sel {
+						allSelected = false
+						break
+					}
+				}
+				for i := range m.SkillSelected {
+					m.SkillSelected[i] = !allSelected
+				}
+			} else if strings.Contains(opt, "Confirm") {
+				// Collect selected skills
+				var selected []SkillInfo
+				for i, sel := range m.SkillSelected {
+					if sel && i < len(notInstalled) {
+						selected = append(selected, notInstalled[i])
+					}
+				}
+				if len(selected) == 0 {
+					return m, nil // No-op if nothing selected
+				}
+				m.ErrorMsg = ""
+				m.SkillResultLog = []string{}
+				m.Screen = ScreenSkillResult
+				return m, installSkillActionCmd(selected)
+			} else {
+				// Toggle individual skill
+				idx := skillOptionToIndex(options, m.Cursor)
+				if idx >= 0 && idx < len(m.SkillSelected) {
+					m.SkillSelected[idx] = !m.SkillSelected[idx]
 				}
 			}
-			if len(selected) == 0 {
-				return m, nil // No-op if nothing selected
-			}
-			m.Choices.SkillInstall = selected
-			m.ErrorMsg = ""
-			m.SkillResultLog = []string{}
-			m.Screen = ScreenSkillResult
-			return m, runSkillActionCmd("install", selected)
 		}
 	}
+
+	// Keep scroll in sync with cursor
+	m.updateSkillScroll(len(options))
+
 	return m, nil
 }
 
 // handleSkillRemoveKeys handles multi-select for skill removal
 func (m Model) handleSkillRemoveKeys(key string) (tea.Model, tea.Cmd) {
 	options := m.GetCurrentOptions()
+	installed := m.getInstalledSkills()
+
 	switch key {
 	case "up", "k":
 		if m.Cursor > 0 {
@@ -2939,27 +3234,62 @@ func (m Model) handleSkillRemoveKeys(key string) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
-	case "enter":
-		if m.Cursor < len(m.InstalledSkills) && m.Cursor < len(m.SkillSelected) {
-			// Toggle selection
-			m.SkillSelected[m.Cursor] = !m.SkillSelected[m.Cursor]
-		} else if m.Cursor < len(options) && strings.Contains(options[m.Cursor], "Confirm") {
-			// Collect selected skills
-			var selected []string
-			for i, sel := range m.SkillSelected {
-				if sel && i < len(m.InstalledSkills) {
-					selected = append(selected, m.InstalledSkills[i])
+	case "enter", " ":
+		if m.Cursor < len(options) {
+			opt := options[m.Cursor]
+			if strings.HasPrefix(opt, "✅ Select All") {
+				// Toggle all
+				allSelected := true
+				for _, sel := range m.SkillSelected {
+					if !sel {
+						allSelected = false
+						break
+					}
+				}
+				for i := range m.SkillSelected {
+					m.SkillSelected[i] = !allSelected
+				}
+			} else if strings.Contains(opt, "Confirm") {
+				// Collect selected skills
+				var selected []SkillInfo
+				for i, sel := range m.SkillSelected {
+					if sel && i < len(installed) {
+						selected = append(selected, installed[i])
+					}
+				}
+				if len(selected) == 0 {
+					return m, nil // No-op if nothing selected
+				}
+				m.ErrorMsg = ""
+				m.SkillResultLog = []string{}
+				m.Screen = ScreenSkillResult
+				return m, removeSkillActionCmd(selected)
+			} else {
+				// Toggle individual skill
+				idx := skillOptionToIndex(options, m.Cursor)
+				if idx >= 0 && idx < len(m.SkillSelected) {
+					m.SkillSelected[idx] = !m.SkillSelected[idx]
 				}
 			}
-			if len(selected) == 0 {
-				return m, nil // No-op if nothing selected
-			}
-			m.Choices.SkillRemove = selected
-			m.ErrorMsg = ""
-			m.SkillResultLog = []string{}
-			m.Screen = ScreenSkillResult
-			return m, runSkillActionCmd("remove", selected)
 		}
 	}
+
+	// Keep scroll in sync with cursor
+	m.updateSkillScroll(len(options))
+
 	return m, nil
+}
+
+// updateSkillScroll keeps SkillScroll in sync with cursor (viewport follows cursor)
+func (m *Model) updateSkillScroll(totalItems int) {
+	visibleItems := m.Height - 8
+	if visibleItems < 5 {
+		visibleItems = 5
+	}
+	if m.Cursor < m.SkillScroll {
+		m.SkillScroll = m.Cursor
+	}
+	if m.Cursor >= m.SkillScroll+visibleItems {
+		m.SkillScroll = m.Cursor - visibleItems + 1
+	}
 }

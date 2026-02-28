@@ -1656,60 +1656,7 @@ func runProjectInitScript(projectPath, memory, ci string, engram bool) error {
 	return nil
 }
 
-// runSkillAction runs add-skill.sh for install or remove actions on the given skill names
-func runSkillAction(action string, names []string) ([]string, error) {
-	cacheDir := filepath.Join(os.TempDir(), "project-starter-framework-install")
-
-	// Ensure framework is cloned
-	if _, err := os.Stat(cacheDir); os.IsNotExist(err) {
-		cmd := exec.Command("git", "clone", "--depth", "1",
-			"https://github.com/JNZader/project-starter-framework.git", cacheDir)
-		if out, err := cmd.CombinedOutput(); err != nil {
-			return nil, fmt.Errorf("failed to clone framework: %s: %w", string(out), err)
-		}
-	}
-
-	scriptPath := filepath.Join(cacheDir, "scripts", "add-skill.sh")
-	os.Chmod(scriptPath, 0755)
-
-	var logLines []string
-	var errors []string
-
-	for _, name := range names {
-		var args []string
-		if action == "install" {
-			args = []string{scriptPath, "gentleman", name}
-		} else {
-			args = []string{scriptPath, "remove", name}
-		}
-
-		cmd := exec.Command("bash", args...)
-		output, err := cmd.CombinedOutput()
-		outStr := strings.TrimSpace(string(output))
-
-		if err != nil {
-			logLines = append(logLines, fmt.Sprintf("❌ %s: %s", name, err.Error()))
-			errors = append(errors, name)
-		} else {
-			logLines = append(logLines, fmt.Sprintf("✅ %s: OK", name))
-		}
-		if outStr != "" {
-			logLines = append(logLines, "   "+outStr)
-		}
-	}
-
-	if len(errors) > 0 {
-		return logLines, fmt.Errorf("%d skill(s) failed: %s", len(errors), strings.Join(errors, ", "))
-	}
-	return logLines, nil
-}
-
 // RunProjectInitScript exposes runProjectInitScript for CLI usage
 func RunProjectInitScript(projectPath, memory, ci string, engram bool) error {
 	return runProjectInitScript(projectPath, memory, ci, engram)
-}
-
-// RunSkillAction exposes runSkillAction for CLI usage
-func RunSkillAction(action string, names []string) ([]string, error) {
-	return runSkillAction(action, names)
 }

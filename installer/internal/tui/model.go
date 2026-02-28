@@ -73,11 +73,12 @@ const (
 	ScreenProjectInstalling // Progress log
 	ScreenProjectResult     // Success/error
 	// Skill Manager screens
-	ScreenSkillMenu    // Browse / Install / Remove
+	ScreenSkillMenu    // Browse / Install / Remove / Update
 	ScreenSkillBrowse  // Scrollable read-only list
 	ScreenSkillInstall // Multi-select from available skills
 	ScreenSkillRemove  // Multi-select from installed skills
 	ScreenSkillResult  // Success/error output
+	ScreenSkillUpdate  // Updating catalog (git pull)
 )
 
 // InstallStep represents a single installation step
@@ -123,9 +124,6 @@ type UserChoices struct {
 	ProjectMemory string
 	ProjectCI     string
 	ProjectEngram bool
-	// Skill manager
-	SkillInstall []string
-	SkillRemove  []string
 }
 
 // Model is the main application state
@@ -198,9 +196,8 @@ type Model struct {
 	ProjectCI        string
 	ProjectLogLines  []string
 	// Skill manager
-	SkillList      []string
-	InstalledSkills []string
-	SkillSelected  []bool
+	SkillCatalog   []SkillInfo // full catalog from fetchSkillCatalog
+	SkillSelected  []bool      // selection state (reused per screen)
 	SkillScroll    int
 	SkillLoading   bool
 	SkillLoadError string
@@ -259,8 +256,7 @@ func NewModel() Model {
 		ProjectCI:        "",
 		ProjectLogLines:  []string{},
 		// Skill manager
-		SkillList:      []string{},
-		InstalledSkills: []string{},
+		SkillCatalog:   []SkillInfo{},
 		SkillSelected:  []bool{},
 		SkillScroll:    0,
 		SkillLoading:   false,
@@ -496,31 +492,13 @@ func (m Model) GetCurrentOptions() []string {
 		return []string{"✅ Confirm & Initialize", "❌ Cancel"}
 	// Skill Manager screens
 	case ScreenSkillMenu:
-		return []string{"🔍 Browse Skills", "📥 Install Skills", "🗑️  Remove Skills", "─────────────", "← Back"}
+		return []string{"🔍 Browse Skills", "📥 Install Skills", "🗑️  Remove Skills", "🔄 Update Catalog", "─────────────", "← Back"}
 	case ScreenSkillBrowse:
-		opts := make([]string, 0, len(m.SkillList)+2)
-		for _, skill := range m.SkillList {
-			opts = append(opts, skill)
-		}
-		opts = append(opts, "─────────────")
-		opts = append(opts, "← Back")
-		return opts
+		return m.buildSkillBrowseOptions()
 	case ScreenSkillInstall:
-		opts := make([]string, 0, len(m.SkillList)+2)
-		for _, skill := range m.SkillList {
-			opts = append(opts, skill)
-		}
-		opts = append(opts, "─────────────")
-		opts = append(opts, "✅ Confirm installation")
-		return opts
+		return m.buildSkillInstallOptions()
 	case ScreenSkillRemove:
-		opts := make([]string, 0, len(m.InstalledSkills)+2)
-		for _, skill := range m.InstalledSkills {
-			opts = append(opts, skill)
-		}
-		opts = append(opts, "─────────────")
-		opts = append(opts, "✅ Confirm removal")
-		return opts
+		return m.buildSkillRemoveOptions()
 	default:
 		return []string{}
 	}
@@ -658,6 +636,8 @@ func (m Model) GetScreenTitle() string {
 		return "🎯 Skill Manager — Remove"
 	case ScreenSkillResult:
 		return "🎯 Skill Manager — Result"
+	case ScreenSkillUpdate:
+		return "🎯 Skill Manager — Update Catalog"
 	default:
 		return ""
 	}
@@ -728,9 +708,169 @@ func (m Model) GetScreenDescription() string {
 		return "Toggle skills to remove with Enter, then confirm"
 	case ScreenSkillResult:
 		return "Operation results"
+	case ScreenSkillUpdate:
+		return "Pulling latest changes from Gentleman-Skills"
 	default:
 		return ""
 	}
+}
+
+// SkillInfo holds parsed metadata about a skill from the catalog
+type SkillInfo struct {
+	Name        string // from frontmatter "name"
+	Description string // from frontmatter "description" (first line only for display)
+	Category    string // "curated" or "community"
+	DirName     string // folder name (e.g. "react-19")
+	FullPath    string // absolute path to the skill dir
+	Installed   bool   // true if symlink exists in any CLI skill path
+}
+
+// truncateDesc truncates a description to maxLen characters, adding ellipsis if needed
+func truncateDesc(desc string, maxLen int) string {
+	if len(desc) <= maxLen {
+		return desc
+	}
+	return desc[:maxLen-1] + "…"
+}
+
+// filterSkillsByCategory returns skills matching the given category
+func filterSkillsByCategory(skills []SkillInfo, category string) []SkillInfo {
+	var result []SkillInfo
+	for _, s := range skills {
+		if s.Category == category {
+			result = append(result, s)
+		}
+	}
+	return result
+}
+
+// buildSkillBrowseOptions builds options for the browse screen with group headers and installed indicators
+func (m Model) buildSkillBrowseOptions() []string {
+	curated := filterSkillsByCategory(m.SkillCatalog, "curated")
+	community := filterSkillsByCategory(m.SkillCatalog, "community")
+
+	opts := make([]string, 0, len(m.SkillCatalog)+6)
+	if len(curated) > 0 {
+		opts = append(opts, "📦 Curated")
+		for _, s := range curated {
+			badge := "  "
+			if s.Installed {
+				badge = "✓ "
+			}
+			desc := truncateDesc(s.Description, 60)
+			if desc != "" {
+				opts = append(opts, badge+s.Name+" — "+desc)
+			} else {
+				opts = append(opts, badge+s.Name)
+			}
+		}
+	}
+	if len(community) > 0 {
+		opts = append(opts, "🌐 Community")
+		for _, s := range community {
+			badge := "  "
+			if s.Installed {
+				badge = "✓ "
+			}
+			desc := truncateDesc(s.Description, 60)
+			if desc != "" {
+				opts = append(opts, badge+s.Name+" — "+desc)
+			} else {
+				opts = append(opts, badge+s.Name)
+			}
+		}
+	}
+	opts = append(opts, "─────────────")
+	opts = append(opts, "← Back")
+	return opts
+}
+
+// buildSkillInstallOptions builds options for the install screen (only NOT-installed skills)
+func (m Model) buildSkillInstallOptions() []string {
+	var notInstalled []SkillInfo
+	for _, s := range m.SkillCatalog {
+		if !s.Installed {
+			notInstalled = append(notInstalled, s)
+		}
+	}
+	curated := filterSkillsByCategory(notInstalled, "curated")
+	community := filterSkillsByCategory(notInstalled, "community")
+
+	opts := make([]string, 0, len(notInstalled)+6)
+	opts = append(opts, "✅ Select All")
+	if len(curated) > 0 {
+		opts = append(opts, "📦 Curated")
+		for _, s := range curated {
+			desc := truncateDesc(s.Description, 60)
+			if desc != "" {
+				opts = append(opts, s.Name+" — "+desc)
+			} else {
+				opts = append(opts, s.Name)
+			}
+		}
+	}
+	if len(community) > 0 {
+		opts = append(opts, "🌐 Community")
+		for _, s := range community {
+			desc := truncateDesc(s.Description, 60)
+			if desc != "" {
+				opts = append(opts, s.Name+" — "+desc)
+			} else {
+				opts = append(opts, s.Name)
+			}
+		}
+	}
+	opts = append(opts, "─────────────")
+	opts = append(opts, "✅ Confirm installation")
+	return opts
+}
+
+// buildSkillRemoveOptions builds options for the remove screen (only installed skills)
+func (m Model) buildSkillRemoveOptions() []string {
+	var installed []SkillInfo
+	for _, s := range m.SkillCatalog {
+		if s.Installed {
+			installed = append(installed, s)
+		}
+	}
+
+	opts := make([]string, 0, len(installed)+4)
+	if len(installed) > 0 {
+		opts = append(opts, "✅ Select All")
+		for _, s := range installed {
+			desc := truncateDesc(s.Description, 60)
+			if desc != "" {
+				opts = append(opts, s.Name+" — "+desc)
+			} else {
+				opts = append(opts, s.Name)
+			}
+		}
+	}
+	opts = append(opts, "─────────────")
+	opts = append(opts, "✅ Confirm removal")
+	return opts
+}
+
+// getNotInstalledSkills returns skills from catalog that are not installed
+func (m Model) getNotInstalledSkills() []SkillInfo {
+	var result []SkillInfo
+	for _, s := range m.SkillCatalog {
+		if !s.Installed {
+			result = append(result, s)
+		}
+	}
+	return result
+}
+
+// getInstalledSkills returns skills from catalog that are installed
+func (m Model) getInstalledSkills() []SkillInfo {
+	var result []SkillInfo
+	for _, s := range m.SkillCatalog {
+		if s.Installed {
+			result = append(result, s)
+		}
+	}
+	return result
 }
 
 // SetupInstallSteps creates the installation steps based on user choices

@@ -183,7 +183,27 @@ func runNonInteractive(flags *cliFlags) error {
 		}
 		fmt.Printf("📥 Installing %d skill(s)...\n", len(names))
 		tui.SetNonInteractiveMode(true)
-		logLines, err := tui.RunSkillAction("install", names)
+
+		// Fetch catalog to get SkillInfo for each requested name
+		catalog, err := tui.FetchSkillCatalog()
+		if err != nil {
+			return fmt.Errorf("failed to fetch skill catalog: %w", err)
+		}
+		var toInstall []tui.SkillInfo
+		nameSet := make(map[string]bool)
+		for _, n := range names {
+			nameSet[n] = true
+		}
+		for _, s := range catalog {
+			if nameSet[s.Name] || nameSet[s.DirName] {
+				toInstall = append(toInstall, s)
+			}
+		}
+		if len(toInstall) == 0 {
+			return fmt.Errorf("no matching skills found in catalog for: %s", strings.Join(names, ", "))
+		}
+
+		logLines, err := tui.InstallSkillSymlinks(toInstall)
 		for _, line := range logLines {
 			fmt.Println("  " + line)
 		}
@@ -203,7 +223,14 @@ func runNonInteractive(flags *cliFlags) error {
 		}
 		fmt.Printf("🗑️  Removing %d skill(s)...\n", len(names))
 		tui.SetNonInteractiveMode(true)
-		logLines, err := tui.RunSkillAction("remove", names)
+
+		// Build SkillInfo from names (we only need the Name field for removal)
+		var toRemove []tui.SkillInfo
+		for _, n := range names {
+			toRemove = append(toRemove, tui.SkillInfo{Name: n})
+		}
+
+		logLines, err := tui.RemoveSkillSymlinks(toRemove)
 		for _, line := range logLines {
 			fmt.Println("  " + line)
 		}

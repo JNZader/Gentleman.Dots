@@ -134,6 +134,8 @@ func (m Model) View() string {
 		s.WriteString(m.renderSkillRemove())
 	case ScreenSkillResult:
 		s.WriteString(m.renderSkillResult())
+	case ScreenSkillUpdate:
+		s.WriteString(m.renderSkillUpdate())
 	}
 
 	// Leader mode indicator
@@ -2279,11 +2281,13 @@ func (m Model) renderProjectResult() string {
 	return s.String()
 }
 
-// renderSkillBrowse renders the skill browse screen
+// renderSkillBrowse renders the skill browse screen with viewport scrolling
 func (m Model) renderSkillBrowse() string {
 	var s strings.Builder
 
 	s.WriteString(TitleStyle.Render(m.GetScreenTitle()))
+	s.WriteString("\n")
+	s.WriteString(MutedStyle.Render(m.GetScreenDescription()))
 	s.WriteString("\n\n")
 
 	if m.SkillLoading {
@@ -2300,9 +2304,42 @@ func (m Model) renderSkillBrowse() string {
 	}
 
 	options := m.GetCurrentOptions()
-	for i, opt := range options {
+
+	// Calculate visible area
+	visibleItems := m.Height - 8
+	if visibleItems < 5 {
+		visibleItems = 5
+	}
+	if visibleItems > len(options) {
+		visibleItems = len(options)
+	}
+
+	start := m.SkillScroll
+	end := start + visibleItems
+	if end > len(options) {
+		end = len(options)
+		start = end - visibleItems
+		if start < 0 {
+			start = 0
+		}
+	}
+
+	// Scroll-up indicator
+	if start > 0 {
+		s.WriteString(MutedStyle.Render(fmt.Sprintf("  ▲ %d more above", start)))
+		s.WriteString("\n")
+	}
+
+	for i := start; i < end; i++ {
+		opt := options[i]
 		if strings.HasPrefix(opt, "───") {
 			s.WriteString(MutedStyle.Render(opt))
+			s.WriteString("\n")
+			continue
+		}
+		// Group headers are rendered differently
+		if strings.HasPrefix(opt, "📦") || strings.HasPrefix(opt, "🌐") {
+			s.WriteString(InfoStyle.Render("  " + opt))
 			s.WriteString("\n")
 			continue
 		}
@@ -2316,12 +2353,18 @@ func (m Model) renderSkillBrowse() string {
 		s.WriteString("\n")
 	}
 
+	// Scroll-down indicator
+	if end < len(options) {
+		s.WriteString(MutedStyle.Render(fmt.Sprintf("  ▼ %d more below", len(options)-end)))
+		s.WriteString("\n")
+	}
+
 	s.WriteString("\n")
-	s.WriteString(HelpStyle.Render("↑/k up • ↓/j down • [Enter] select • [Esc] back"))
+	s.WriteString(HelpStyle.Render("↑/k up • ↓/j down • [Enter] back • [Esc] back"))
 	return s.String()
 }
 
-// renderSkillInstall renders the skill install multi-select screen
+// renderSkillInstall renders the skill install multi-select screen with viewport scrolling
 func (m Model) renderSkillInstall() string {
 	var s strings.Builder
 
@@ -2344,22 +2387,58 @@ func (m Model) renderSkillInstall() string {
 	}
 
 	options := m.GetCurrentOptions()
-	for i, opt := range options {
+
+	// Calculate visible area
+	visibleItems := m.Height - 8
+	if visibleItems < 5 {
+		visibleItems = 5
+	}
+	if visibleItems > len(options) {
+		visibleItems = len(options)
+	}
+
+	start := m.SkillScroll
+	end := start + visibleItems
+	if end > len(options) {
+		end = len(options)
+		start = end - visibleItems
+		if start < 0 {
+			start = 0
+		}
+	}
+
+	// Scroll-up indicator
+	if start > 0 {
+		s.WriteString(MutedStyle.Render(fmt.Sprintf("  ▲ %d more above", start)))
+		s.WriteString("\n")
+	}
+
+	for i := start; i < end; i++ {
+		opt := options[i]
 		if strings.HasPrefix(opt, "───") {
 			s.WriteString(MutedStyle.Render(opt))
 			s.WriteString("\n")
 			continue
 		}
+		// Group headers
+		if strings.HasPrefix(opt, "📦") || strings.HasPrefix(opt, "🌐") {
+			s.WriteString(InfoStyle.Render("  " + opt))
+			s.WriteString("\n")
+			continue
+		}
+
 		cursor := "  "
 		style := UnselectedStyle
 		if i == m.Cursor {
 			cursor = "▸ "
 			style = SelectedStyle
 		}
-		// Checkbox for skill items
-		if i < len(m.SkillSelected) {
+
+		// Checkbox for skill items (not Select All, Confirm, or headers)
+		idx := skillOptionToIndex(options, i)
+		if idx >= 0 && idx < len(m.SkillSelected) {
 			check := "[ ]"
-			if m.SkillSelected[i] {
+			if m.SkillSelected[idx] {
 				check = "[✓]"
 			}
 			s.WriteString(style.Render(fmt.Sprintf("%s%s %s", cursor, check, opt)))
@@ -2369,12 +2448,18 @@ func (m Model) renderSkillInstall() string {
 		s.WriteString("\n")
 	}
 
+	// Scroll-down indicator
+	if end < len(options) {
+		s.WriteString(MutedStyle.Render(fmt.Sprintf("  ▼ %d more below", len(options)-end)))
+		s.WriteString("\n")
+	}
+
 	s.WriteString("\n")
-	s.WriteString(HelpStyle.Render("↑/k up • ↓/j down • [Enter] toggle/confirm • [Esc] back"))
+	s.WriteString(HelpStyle.Render("↑/k up • ↓/j down • [Enter/Space] toggle • [Esc] back"))
 	return s.String()
 }
 
-// renderSkillRemove renders the skill removal multi-select screen
+// renderSkillRemove renders the skill removal multi-select screen with viewport scrolling
 func (m Model) renderSkillRemove() string {
 	var s strings.Builder
 
@@ -2396,7 +2481,8 @@ func (m Model) renderSkillRemove() string {
 		return s.String()
 	}
 
-	if len(m.InstalledSkills) == 0 {
+	installed := m.getInstalledSkills()
+	if len(installed) == 0 {
 		s.WriteString("  No skills installed\n")
 		s.WriteString("\n")
 		s.WriteString(HelpStyle.Render("  Press Esc to go back"))
@@ -2404,22 +2490,52 @@ func (m Model) renderSkillRemove() string {
 	}
 
 	options := m.GetCurrentOptions()
-	for i, opt := range options {
+
+	// Calculate visible area
+	visibleItems := m.Height - 8
+	if visibleItems < 5 {
+		visibleItems = 5
+	}
+	if visibleItems > len(options) {
+		visibleItems = len(options)
+	}
+
+	start := m.SkillScroll
+	end := start + visibleItems
+	if end > len(options) {
+		end = len(options)
+		start = end - visibleItems
+		if start < 0 {
+			start = 0
+		}
+	}
+
+	// Scroll-up indicator
+	if start > 0 {
+		s.WriteString(MutedStyle.Render(fmt.Sprintf("  ▲ %d more above", start)))
+		s.WriteString("\n")
+	}
+
+	for i := start; i < end; i++ {
+		opt := options[i]
 		if strings.HasPrefix(opt, "───") {
 			s.WriteString(MutedStyle.Render(opt))
 			s.WriteString("\n")
 			continue
 		}
+
 		cursor := "  "
 		style := UnselectedStyle
 		if i == m.Cursor {
 			cursor = "▸ "
 			style = SelectedStyle
 		}
-		// Checkbox for skill items
-		if i < len(m.SkillSelected) {
+
+		// Checkbox for skill items (not Select All or Confirm)
+		idx := skillOptionToIndex(options, i)
+		if idx >= 0 && idx < len(m.SkillSelected) {
 			check := "[ ]"
-			if m.SkillSelected[i] {
+			if m.SkillSelected[idx] {
 				check = "[✓]"
 			}
 			s.WriteString(style.Render(fmt.Sprintf("%s%s %s", cursor, check, opt)))
@@ -2429,8 +2545,14 @@ func (m Model) renderSkillRemove() string {
 		s.WriteString("\n")
 	}
 
+	// Scroll-down indicator
+	if end < len(options) {
+		s.WriteString(MutedStyle.Render(fmt.Sprintf("  ▼ %d more below", len(options)-end)))
+		s.WriteString("\n")
+	}
+
 	s.WriteString("\n")
-	s.WriteString(HelpStyle.Render("↑/k up • ↓/j down • [Enter] toggle/confirm • [Esc] back"))
+	s.WriteString(HelpStyle.Render("↑/k up • ↓/j down • [Enter/Space] toggle • [Esc] back"))
 	return s.String()
 }
 
@@ -2455,5 +2577,25 @@ func (m Model) renderSkillResult() string {
 
 	s.WriteString("\n")
 	s.WriteString(HelpStyle.Render("  Press Enter to return"))
+	return s.String()
+}
+
+// renderSkillUpdate renders the skill catalog update screen
+func (m Model) renderSkillUpdate() string {
+	var s strings.Builder
+
+	s.WriteString(TitleStyle.Render(m.GetScreenTitle()))
+	s.WriteString("\n")
+	s.WriteString(MutedStyle.Render(m.GetScreenDescription()))
+	s.WriteString("\n\n")
+
+	if m.SkillLoading {
+		spinners := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+		spinner := spinners[m.SpinnerFrame%len(spinners)]
+		s.WriteString(fmt.Sprintf("  %s Updating catalog...\n", spinner))
+	}
+
+	s.WriteString("\n")
+	s.WriteString(HelpStyle.Render("  Please wait..."))
 	return s.String()
 }
