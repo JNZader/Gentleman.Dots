@@ -262,9 +262,9 @@ func TestHandleMainMenuWithRestore(t *testing.T) {
 		m := NewModel()
 		m.Screen = ScreenMainMenu
 		m.AvailableBackups = []system.BackupInfo{} // No backups
-		// Options without restore: Start, Learn, Keymaps, LazyVim, Vim Trainer, Exit
-		// Exit is at index 5
-		m.Cursor = 5
+		// Options without restore: Start, Learn, Keymaps, LazyVim, Vim Trainer, Init Project, Skill Manager, Exit
+		// Exit is at index 7
+		m.Cursor = 7
 
 		_, cmd := m.handleMainMenuKeys("enter")
 

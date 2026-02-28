@@ -31,6 +31,13 @@ type cliFlags struct {
 	aiPreset         string
 	aiModules        string
 	agentTeamsLite   bool
+	initProject    bool
+	projectPath    string
+	projectMemory  string
+	projectCI      string
+	projectEngram  bool
+	skillInstall   string // comma-separated skill names to install
+	skillRemove    string // comma-separated skill names to remove
 }
 
 func parseFlags() *cliFlags {
@@ -55,6 +62,13 @@ func parseFlags() *cliFlags {
 	flag.StringVar(&flags.aiPreset, "ai-preset", "", "Framework preset: minimal, frontend, backend, fullstack, data, complete")
 	flag.StringVar(&flags.aiModules, "ai-modules", "", "Framework features: hooks,commands,skills,agents,sdd,mcp (comma-separated)")
 	flag.BoolVar(&flags.agentTeamsLite, "agent-teams-lite", false, "Install Agent Teams Lite SDD framework")
+	flag.BoolVar(&flags.initProject, "init-project", false, "Initialize a project with AI framework")
+	flag.StringVar(&flags.projectPath, "project-path", "", "Project directory path (required with --init-project)")
+	flag.StringVar(&flags.projectMemory, "project-memory", "simple", "Memory module: obsidian-brain, vibekanban, engram, simple, none")
+	flag.StringVar(&flags.projectCI, "project-ci", "none", "CI provider: github, gitlab, woodpecker, none")
+	flag.BoolVar(&flags.projectEngram, "project-engram", false, "Add Engram alongside Obsidian Brain")
+	flag.StringVar(&flags.skillInstall, "skill-install", "", "Skills to install (comma-separated)")
+	flag.StringVar(&flags.skillRemove, "skill-remove", "", "Skills to remove (comma-separated)")
 
 	flag.Parse()
 	return flags
@@ -107,7 +121,102 @@ func main() {
 }
 
 func runNonInteractive(flags *cliFlags) error {
-	// Validate required flags
+	// Handle project init
+	if flags.initProject {
+		if flags.projectPath == "" {
+			return fmt.Errorf("--project-path is required with --init-project")
+		}
+		path := tui.ExpandPath(flags.projectPath)
+		absPath, err := filepath.Abs(path)
+		if err != nil {
+			return fmt.Errorf("invalid project path: %w", err)
+		}
+		info, err := os.Stat(absPath)
+		if err != nil {
+			return fmt.Errorf("project path does not exist: %s", absPath)
+		}
+		if !info.IsDir() {
+			return fmt.Errorf("project path is not a directory: %s", absPath)
+		}
+
+		// Validate memory
+		validMemory := map[string]bool{"obsidian-brain": true, "vibekanban": true, "engram": true, "simple": true, "none": true}
+		memory := strings.ToLower(flags.projectMemory)
+		if !validMemory[memory] {
+			return fmt.Errorf("invalid memory module: %s (valid: obsidian-brain, vibekanban, engram, simple, none)", memory)
+		}
+
+		// Validate CI
+		validCI := map[string]bool{"github": true, "gitlab": true, "woodpecker": true, "none": true}
+		ci := strings.ToLower(flags.projectCI)
+		if !validCI[ci] {
+			return fmt.Errorf("invalid CI provider: %s (valid: github, gitlab, woodpecker, none)", ci)
+		}
+
+		// Validate engram requires obsidian-brain
+		if flags.projectEngram && memory != "obsidian-brain" {
+			return fmt.Errorf("--project-engram requires --project-memory=obsidian-brain")
+		}
+
+		fmt.Println("📦 Initializing project...")
+		fmt.Printf("  Path:    %s\n", absPath)
+		fmt.Printf("  Memory:  %s\n", memory)
+		fmt.Printf("  CI:      %s\n", ci)
+		if flags.projectEngram {
+			fmt.Printf("  Engram:  yes\n")
+		}
+		fmt.Println()
+
+		tui.SetNonInteractiveMode(true)
+		if err := tui.RunProjectInitScript(absPath, memory, ci, flags.projectEngram); err != nil {
+			return fmt.Errorf("project initialization failed: %w", err)
+		}
+		fmt.Println("✅ Project initialized successfully!")
+		return nil // Don't continue to environment installation
+	}
+
+	// Handle skill operations
+	if flags.skillInstall != "" {
+		names := strings.Split(flags.skillInstall, ",")
+		for i := range names {
+			names[i] = strings.TrimSpace(names[i])
+		}
+		fmt.Printf("📥 Installing %d skill(s)...\n", len(names))
+		tui.SetNonInteractiveMode(true)
+		logLines, err := tui.RunSkillAction("install", names)
+		for _, line := range logLines {
+			fmt.Println("  " + line)
+		}
+		if err != nil {
+			return fmt.Errorf("skill installation: %w", err)
+		}
+		fmt.Println("✅ Skills installed!")
+		if flags.shell == "" {
+			return nil // Only skill operation, no env install
+		}
+	}
+
+	if flags.skillRemove != "" {
+		names := strings.Split(flags.skillRemove, ",")
+		for i := range names {
+			names[i] = strings.TrimSpace(names[i])
+		}
+		fmt.Printf("🗑️  Removing %d skill(s)...\n", len(names))
+		tui.SetNonInteractiveMode(true)
+		logLines, err := tui.RunSkillAction("remove", names)
+		for _, line := range logLines {
+			fmt.Println("  " + line)
+		}
+		if err != nil {
+			return fmt.Errorf("skill removal: %w", err)
+		}
+		fmt.Println("✅ Skills removed!")
+		if flags.shell == "" {
+			return nil // Only skill operation, no env install
+		}
+	}
+
+	// Validate required flags for environment installation
 	if flags.shell == "" {
 		return fmt.Errorf("--shell is required (fish, zsh, nushell)")
 	}
@@ -281,6 +390,17 @@ AI Options:
                        Each feature installs ALL items in that category (91 agents, 85 skills, etc.)
   --agent-teams-lite   Install Agent Teams Lite SDD framework (can combine with --ai-modules=sdd for both)
 
+Project Init Options:
+  --init-project       Initialize a project with AI framework
+  --project-path=<dir> Project directory (required with --init-project)
+  --project-memory=<m> Memory module: obsidian-brain, vibekanban, engram, simple, none (default: simple)
+  --project-ci=<ci>    CI provider: github, gitlab, woodpecker, none (default: none)
+  --project-engram     Add Engram alongside Obsidian Brain
+
+Skill Manager Options:
+  --skill-install=<s>  Skills to install (comma-separated names)
+  --skill-remove=<s>   Skills to remove (comma-separated names)
+
 Examples:
   # Interactive TUI
   gentleman.dots
@@ -297,6 +417,15 @@ Examples:
 
   # Test mode with Zsh + Tmux (no terminal, no nvim)
   gentleman.dots --test --non-interactive --shell=zsh --wm=tmux
+
+  # Initialize a project
+  gentleman.dots --non-interactive --init-project --project-path=/path/to/project --project-memory=obsidian-brain --project-ci=github
+
+  # Install skills
+  gentleman.dots --non-interactive --skill-install=react-19,typescript,tailwind-4
+
+  # Remove skills
+  gentleman.dots --non-interactive --skill-remove=react-19
 
   # Verbose output (shows all command logs)
   GENTLEMAN_VERBOSE=1 gentleman.dots --non-interactive --shell=fish --nvim

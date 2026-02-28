@@ -63,6 +63,21 @@ const (
 	ScreenTrainerBoss       // Boss fight
 	ScreenTrainerResult     // Result after exercise
 	ScreenTrainerBossResult // Result after boss fight
+	// Project Init screens
+	ScreenProjectPath       // Text input: project directory
+	ScreenProjectStack      // Single-select: detected stack confirmation/override
+	ScreenProjectMemory     // Single-select: memory module
+	ScreenProjectEngram     // Yes/No: add Engram alongside Obsidian Brain
+	ScreenProjectCI         // Single-select: CI provider
+	ScreenProjectConfirm    // Summary before execution
+	ScreenProjectInstalling // Progress log
+	ScreenProjectResult     // Success/error
+	// Skill Manager screens
+	ScreenSkillMenu    // Browse / Install / Remove
+	ScreenSkillBrowse  // Scrollable read-only list
+	ScreenSkillInstall // Multi-select from available skills
+	ScreenSkillRemove  // Multi-select from installed skills
+	ScreenSkillResult  // Success/error output
 )
 
 // InstallStep represents a single installation step
@@ -101,6 +116,16 @@ type UserChoices struct {
 	AIFrameworkPreset    string   // Preset: "minimal", "frontend", "backend", "fullstack", "data", "complete"
 	AIFrameworkModules   []string // Individual module names when preset is "custom"
 	InstallAgentTeamsLite bool    // Whether to install agent-teams-lite SDD framework
+	// Project init
+	InitProject   bool
+	ProjectPath   string
+	ProjectStack  string
+	ProjectMemory string
+	ProjectCI     string
+	ProjectEngram bool
+	// Skill manager
+	SkillInstall []string
+	SkillRemove  []string
 }
 
 // Model is the main application state
@@ -164,6 +189,22 @@ type Model struct {
 	CategoryItemsScroll    int               // Scroll offset for long item lists in category drill-down
 	// Leader key mode (like Vim's <space> leader)
 	LeaderMode bool // True when waiting for next key after <space>
+	// Project init
+	ProjectPathInput string
+	ProjectPathError string
+	ProjectStack     string
+	ProjectMemory    string
+	ProjectEngram    bool
+	ProjectCI        string
+	ProjectLogLines  []string
+	// Skill manager
+	SkillList      []string
+	InstalledSkills []string
+	SkillSelected  []bool
+	SkillScroll    int
+	SkillLoading   bool
+	SkillLoadError string
+	SkillResultLog []string
 }
 
 // NewModel creates a new Model with initial state
@@ -209,6 +250,22 @@ func NewModel() Model {
 		TrainerInput:       "",
 		TrainerLastCorrect: false,
 		TrainerMessage:     "",
+		// Project init
+		ProjectPathInput: "",
+		ProjectPathError: "",
+		ProjectStack:     "",
+		ProjectMemory:    "",
+		ProjectEngram:    false,
+		ProjectCI:        "",
+		ProjectLogLines:  []string{},
+		// Skill manager
+		SkillList:      []string{},
+		InstalledSkills: []string{},
+		SkillSelected:  []bool{},
+		SkillScroll:    0,
+		SkillLoading:   false,
+		SkillLoadError: "",
+		SkillResultLog: []string{},
 	}
 }
 
@@ -270,6 +327,8 @@ func (m Model) GetCurrentOptions() []string {
 		if len(m.AvailableBackups) > 0 {
 			opts = append(opts, "🔄 Restore from Backup")
 		}
+		opts = append(opts, "📦 Initialize Project")
+		opts = append(opts, "🎯 Skill Manager")
 		opts = append(opts, "❌ Exit")
 		return opts
 	case ScreenKeymapsMenu:
@@ -424,6 +483,44 @@ func (m Model) GetCurrentOptions() []string {
 		result[len(titles)] = "─────────────"
 		result[len(titles)+1] = "← Back"
 		return result
+	// Project Init screens
+	case ScreenProjectStack:
+		return []string{"Angular", "Node.js", "Go", "Python", "Rust", "Java", "Ruby", "PHP", "Other"}
+	case ScreenProjectMemory:
+		return []string{"🧠 Obsidian Brain", "📋 VibeKanban", "🧠 Engram", "📝 Simple", "❌ None"}
+	case ScreenProjectEngram:
+		return []string{"Yes, add Engram too", "No, just Obsidian Brain"}
+	case ScreenProjectCI:
+		return []string{"GitHub Actions", "GitLab CI", "Woodpecker", "None"}
+	case ScreenProjectConfirm:
+		return []string{"✅ Confirm & Initialize", "❌ Cancel"}
+	// Skill Manager screens
+	case ScreenSkillMenu:
+		return []string{"🔍 Browse Skills", "📥 Install Skills", "🗑️  Remove Skills", "─────────────", "← Back"}
+	case ScreenSkillBrowse:
+		opts := make([]string, 0, len(m.SkillList)+2)
+		for _, skill := range m.SkillList {
+			opts = append(opts, skill)
+		}
+		opts = append(opts, "─────────────")
+		opts = append(opts, "← Back")
+		return opts
+	case ScreenSkillInstall:
+		opts := make([]string, 0, len(m.SkillList)+2)
+		for _, skill := range m.SkillList {
+			opts = append(opts, skill)
+		}
+		opts = append(opts, "─────────────")
+		opts = append(opts, "✅ Confirm installation")
+		return opts
+	case ScreenSkillRemove:
+		opts := make([]string, 0, len(m.InstalledSkills)+2)
+		for _, skill := range m.InstalledSkills {
+			opts = append(opts, skill)
+		}
+		opts = append(opts, "─────────────")
+		opts = append(opts, "✅ Confirm removal")
+		return opts
 	default:
 		return []string{}
 	}
@@ -533,6 +630,34 @@ func (m Model) GetScreenTitle() string {
 		return "🎮 Vim Trainer - Result"
 	case ScreenTrainerBossResult:
 		return "🎮 Vim Trainer - Boss Battle Complete"
+	// Project Init screens
+	case ScreenProjectPath:
+		return "📦 Initialize Project — Path"
+	case ScreenProjectStack:
+		return "📦 Initialize Project — Stack"
+	case ScreenProjectMemory:
+		return "📦 Initialize Project — Memory Module"
+	case ScreenProjectEngram:
+		return "📦 Initialize Project — Engram Add-on"
+	case ScreenProjectCI:
+		return "📦 Initialize Project — CI/CD Provider"
+	case ScreenProjectConfirm:
+		return "📦 Initialize Project — Confirm"
+	case ScreenProjectInstalling:
+		return "📦 Initializing Project..."
+	case ScreenProjectResult:
+		return "📦 Project Initialization Result"
+	// Skill Manager screens
+	case ScreenSkillMenu:
+		return "🎯 Skill Manager"
+	case ScreenSkillBrowse:
+		return "🎯 Skill Manager — Browse"
+	case ScreenSkillInstall:
+		return "🎯 Skill Manager — Install"
+	case ScreenSkillRemove:
+		return "🎯 Skill Manager — Remove"
+	case ScreenSkillResult:
+		return "🎯 Skill Manager — Result"
 	default:
 		return ""
 	}
@@ -572,6 +697,37 @@ func (m Model) GetScreenDescription() string {
 		return "Toggle modules with Enter. Press Esc to go back."
 	case ScreenGhosttyWarning:
 		return "Ghostty installation may fail on Ubuntu/Debian.\nThe installer script only supports certain versions."
+	// Project Init screens
+	case ScreenProjectPath:
+		return "Enter the path to your project directory"
+	case ScreenProjectStack:
+		if m.ProjectStack != "" && m.ProjectStack != "unknown" {
+			return "Auto-detected: " + m.ProjectStack
+		}
+		return "Select your project's tech stack"
+	case ScreenProjectMemory:
+		return "Choose an AI memory module for your project"
+	case ScreenProjectEngram:
+		return "Add Engram persistent memory alongside Obsidian Brain?"
+	case ScreenProjectCI:
+		return "Select CI/CD provider for your project"
+	case ScreenProjectConfirm:
+		return "Review your choices before initializing"
+	case ScreenProjectInstalling:
+		return "Running init-project.sh..."
+	case ScreenProjectResult:
+		return "Initialization complete"
+	// Skill Manager screens
+	case ScreenSkillMenu:
+		return "Manage skills from the Gentleman-Skills catalog"
+	case ScreenSkillBrowse:
+		return "Available skills from the catalog"
+	case ScreenSkillInstall:
+		return "Toggle skills to install with Enter, then confirm"
+	case ScreenSkillRemove:
+		return "Toggle skills to remove with Enter, then confirm"
+	case ScreenSkillResult:
+		return "Operation results"
 	default:
 		return ""
 	}

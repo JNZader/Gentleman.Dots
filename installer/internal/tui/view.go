@@ -112,6 +112,28 @@ func (m Model) View() string {
 		s.WriteString(m.renderTrainerResult())
 	case ScreenTrainerBossResult:
 		s.WriteString(m.renderTrainerBossResult())
+	// Project init screens
+	case ScreenProjectPath:
+		s.WriteString(m.renderProjectPath())
+	case ScreenProjectStack, ScreenProjectMemory, ScreenProjectEngram, ScreenProjectCI:
+		s.WriteString(m.renderSelection())
+	case ScreenProjectConfirm:
+		s.WriteString(m.renderProjectConfirm())
+	case ScreenProjectInstalling:
+		s.WriteString(m.renderProjectInstalling())
+	case ScreenProjectResult:
+		s.WriteString(m.renderProjectResult())
+	// Skill manager screens
+	case ScreenSkillMenu:
+		s.WriteString(m.renderSelection())
+	case ScreenSkillBrowse:
+		s.WriteString(m.renderSkillBrowse())
+	case ScreenSkillInstall:
+		s.WriteString(m.renderSkillInstall())
+	case ScreenSkillRemove:
+		s.WriteString(m.renderSkillRemove())
+	case ScreenSkillResult:
+		s.WriteString(m.renderSkillResult())
 	}
 
 	// Leader mode indicator
@@ -2154,5 +2176,285 @@ func (m Model) renderTrainerBossResult() string {
 	s.WriteString("\n\n")
 	s.WriteString(HelpStyle.Render("[Enter/Space/Esc/q] return to menu"))
 
+	return s.String()
+}
+
+// renderProjectPath renders the project path text input screen
+func (m Model) renderProjectPath() string {
+	var s strings.Builder
+
+	s.WriteString(TitleStyle.Render(m.GetScreenTitle()))
+	s.WriteString("\n\n")
+	desc := m.GetScreenDescription()
+	if desc != "" {
+		s.WriteString(MutedStyle.Render(desc))
+		s.WriteString("\n\n")
+	}
+	// Input line with cursor block
+	s.WriteString("  > " + m.ProjectPathInput + "█")
+	s.WriteString("\n")
+	if m.ProjectPathError != "" {
+		s.WriteString("\n")
+		s.WriteString(ErrorStyle.Render("  ⚠ " + m.ProjectPathError))
+		s.WriteString("\n")
+	}
+	s.WriteString("\n")
+	s.WriteString(HelpStyle.Render("  Enter: confirm  •  Esc: cancel  •  Type the full path"))
+	return s.String()
+}
+
+// renderProjectConfirm renders the project initialization confirmation screen
+func (m Model) renderProjectConfirm() string {
+	var s strings.Builder
+
+	s.WriteString(TitleStyle.Render(m.GetScreenTitle()))
+	s.WriteString("\n\n")
+	s.WriteString(InfoStyle.Render("  Configuration Summary:"))
+	s.WriteString("\n\n")
+	s.WriteString(fmt.Sprintf("    Path:    %s\n", m.ProjectPathInput))
+	s.WriteString(fmt.Sprintf("    Stack:   %s\n", m.ProjectStack))
+	s.WriteString(fmt.Sprintf("    Memory:  %s\n", m.ProjectMemory))
+	if m.ProjectMemory == "obsidian-brain" {
+		engram := "No"
+		if m.ProjectEngram {
+			engram = "Yes"
+		}
+		s.WriteString(fmt.Sprintf("    Engram:  %s\n", engram))
+	}
+	s.WriteString(fmt.Sprintf("    CI:      %s\n", m.ProjectCI))
+	s.WriteString("\n")
+
+	// Options
+	options := m.GetCurrentOptions()
+	for i, opt := range options {
+		cursor := "  "
+		style := UnselectedStyle
+		if i == m.Cursor {
+			cursor = "▸ "
+			style = SelectedStyle
+		}
+		s.WriteString(style.Render(cursor + opt))
+		s.WriteString("\n")
+	}
+
+	s.WriteString("\n")
+	s.WriteString(HelpStyle.Render("↑/k up • ↓/j down • [Enter] select • [Esc] back"))
+	return s.String()
+}
+
+// renderProjectInstalling renders the project initialization progress screen
+func (m Model) renderProjectInstalling() string {
+	var s strings.Builder
+
+	s.WriteString(TitleStyle.Render(m.GetScreenTitle()))
+	s.WriteString("\n\n")
+
+	// Spinner
+	spinners := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+	spinner := spinners[m.SpinnerFrame%len(spinners)]
+	s.WriteString(fmt.Sprintf("  %s Initializing project...\n\n", spinner))
+
+	// Log lines
+	for _, line := range m.ProjectLogLines {
+		s.WriteString("    " + line + "\n")
+	}
+	return s.String()
+}
+
+// renderProjectResult renders the project initialization result screen
+func (m Model) renderProjectResult() string {
+	var s strings.Builder
+
+	s.WriteString(TitleStyle.Render(m.GetScreenTitle()))
+	s.WriteString("\n\n")
+
+	if m.ErrorMsg != "" {
+		s.WriteString(ErrorStyle.Render("  ❌ Project initialization failed"))
+		s.WriteString("\n\n")
+		s.WriteString("    " + m.ErrorMsg)
+	} else {
+		s.WriteString(SuccessStyle.Render("  ✅ Project initialized successfully!"))
+	}
+	s.WriteString("\n\n")
+	s.WriteString(HelpStyle.Render("  Press Enter to return to the main menu"))
+	return s.String()
+}
+
+// renderSkillBrowse renders the skill browse screen
+func (m Model) renderSkillBrowse() string {
+	var s strings.Builder
+
+	s.WriteString(TitleStyle.Render(m.GetScreenTitle()))
+	s.WriteString("\n\n")
+
+	if m.SkillLoading {
+		spinners := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+		spinner := spinners[m.SpinnerFrame%len(spinners)]
+		s.WriteString(fmt.Sprintf("  %s Fetching skill catalog...\n", spinner))
+		return s.String()
+	}
+	if m.SkillLoadError != "" {
+		s.WriteString(ErrorStyle.Render("  ⚠ " + m.SkillLoadError))
+		s.WriteString("\n\n")
+		s.WriteString(HelpStyle.Render("  Press Esc to go back"))
+		return s.String()
+	}
+
+	options := m.GetCurrentOptions()
+	for i, opt := range options {
+		if strings.HasPrefix(opt, "───") {
+			s.WriteString(MutedStyle.Render(opt))
+			s.WriteString("\n")
+			continue
+		}
+		cursor := "  "
+		style := UnselectedStyle
+		if i == m.Cursor {
+			cursor = "▸ "
+			style = SelectedStyle
+		}
+		s.WriteString(style.Render(cursor + opt))
+		s.WriteString("\n")
+	}
+
+	s.WriteString("\n")
+	s.WriteString(HelpStyle.Render("↑/k up • ↓/j down • [Enter] select • [Esc] back"))
+	return s.String()
+}
+
+// renderSkillInstall renders the skill install multi-select screen
+func (m Model) renderSkillInstall() string {
+	var s strings.Builder
+
+	s.WriteString(TitleStyle.Render(m.GetScreenTitle()))
+	s.WriteString("\n")
+	s.WriteString(MutedStyle.Render(m.GetScreenDescription()))
+	s.WriteString("\n\n")
+
+	if m.SkillLoading {
+		spinners := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+		spinner := spinners[m.SpinnerFrame%len(spinners)]
+		s.WriteString(fmt.Sprintf("  %s Fetching skill catalog...\n", spinner))
+		return s.String()
+	}
+	if m.SkillLoadError != "" {
+		s.WriteString(ErrorStyle.Render("  ⚠ " + m.SkillLoadError))
+		s.WriteString("\n\n")
+		s.WriteString(HelpStyle.Render("  Press Esc to go back"))
+		return s.String()
+	}
+
+	options := m.GetCurrentOptions()
+	for i, opt := range options {
+		if strings.HasPrefix(opt, "───") {
+			s.WriteString(MutedStyle.Render(opt))
+			s.WriteString("\n")
+			continue
+		}
+		cursor := "  "
+		style := UnselectedStyle
+		if i == m.Cursor {
+			cursor = "▸ "
+			style = SelectedStyle
+		}
+		// Checkbox for skill items
+		if i < len(m.SkillSelected) {
+			check := "[ ]"
+			if m.SkillSelected[i] {
+				check = "[✓]"
+			}
+			s.WriteString(style.Render(fmt.Sprintf("%s%s %s", cursor, check, opt)))
+		} else {
+			s.WriteString(style.Render(cursor + opt))
+		}
+		s.WriteString("\n")
+	}
+
+	s.WriteString("\n")
+	s.WriteString(HelpStyle.Render("↑/k up • ↓/j down • [Enter] toggle/confirm • [Esc] back"))
+	return s.String()
+}
+
+// renderSkillRemove renders the skill removal multi-select screen
+func (m Model) renderSkillRemove() string {
+	var s strings.Builder
+
+	s.WriteString(TitleStyle.Render(m.GetScreenTitle()))
+	s.WriteString("\n")
+	s.WriteString(MutedStyle.Render(m.GetScreenDescription()))
+	s.WriteString("\n\n")
+
+	if m.SkillLoading {
+		spinners := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+		spinner := spinners[m.SpinnerFrame%len(spinners)]
+		s.WriteString(fmt.Sprintf("  %s Loading installed skills...\n", spinner))
+		return s.String()
+	}
+	if m.SkillLoadError != "" {
+		s.WriteString(ErrorStyle.Render("  ⚠ " + m.SkillLoadError))
+		s.WriteString("\n\n")
+		s.WriteString(HelpStyle.Render("  Press Esc to go back"))
+		return s.String()
+	}
+
+	if len(m.InstalledSkills) == 0 {
+		s.WriteString("  No skills installed\n")
+		s.WriteString("\n")
+		s.WriteString(HelpStyle.Render("  Press Esc to go back"))
+		return s.String()
+	}
+
+	options := m.GetCurrentOptions()
+	for i, opt := range options {
+		if strings.HasPrefix(opt, "───") {
+			s.WriteString(MutedStyle.Render(opt))
+			s.WriteString("\n")
+			continue
+		}
+		cursor := "  "
+		style := UnselectedStyle
+		if i == m.Cursor {
+			cursor = "▸ "
+			style = SelectedStyle
+		}
+		// Checkbox for skill items
+		if i < len(m.SkillSelected) {
+			check := "[ ]"
+			if m.SkillSelected[i] {
+				check = "[✓]"
+			}
+			s.WriteString(style.Render(fmt.Sprintf("%s%s %s", cursor, check, opt)))
+		} else {
+			s.WriteString(style.Render(cursor + opt))
+		}
+		s.WriteString("\n")
+	}
+
+	s.WriteString("\n")
+	s.WriteString(HelpStyle.Render("↑/k up • ↓/j down • [Enter] toggle/confirm • [Esc] back"))
+	return s.String()
+}
+
+// renderSkillResult renders the skill operation result screen
+func (m Model) renderSkillResult() string {
+	var s strings.Builder
+
+	s.WriteString(TitleStyle.Render(m.GetScreenTitle()))
+	s.WriteString("\n\n")
+
+	if m.ErrorMsg != "" {
+		s.WriteString(WarningStyle.Render("  ⚠ Some operations failed"))
+		s.WriteString("\n\n")
+	} else {
+		s.WriteString(SuccessStyle.Render("  ✅ All operations completed"))
+		s.WriteString("\n\n")
+	}
+
+	for _, line := range m.SkillResultLog {
+		s.WriteString("    " + line + "\n")
+	}
+
+	s.WriteString("\n")
+	s.WriteString(HelpStyle.Render("  Press Enter to return"))
 	return s.String()
 }

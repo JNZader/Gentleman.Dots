@@ -3,9 +3,11 @@ package tui
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/Gentleman-Programming/Gentleman.Dots/installer/internal/system"
 )
@@ -1437,4 +1439,143 @@ fi
 	SendLog(stepID, fmt.Sprintf("✓ Default shell set to %s", shell))
 	SendLog(stepID, "Log out and log back in for changes to take effect")
 	return nil
+}
+
+// runProjectInitScript clones project-starter-framework and runs init-project.sh
+func runProjectInitScript(projectPath, memory, ci string, engram bool) error {
+	cacheDir := filepath.Join(os.TempDir(), "project-starter-framework-install")
+
+	// Check cache freshness (1 hour)
+	needsClone := true
+	if info, err := os.Stat(cacheDir); err == nil {
+		if time.Since(info.ModTime()) < time.Hour {
+			needsClone = false
+		} else {
+			os.RemoveAll(cacheDir)
+		}
+	}
+
+	if needsClone {
+		if globalProgram != nil {
+			globalProgram.Send(projectInstallLogMsg{line: "Cloning project-starter-framework..."})
+		}
+		cmd := exec.Command("git", "clone", "--depth", "1",
+			"https://github.com/JNZader/project-starter-framework.git", cacheDir)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("failed to clone framework: %s: %w", string(out), err)
+		}
+	}
+
+	// Build command
+	scriptPath := filepath.Join(cacheDir, "init-project.sh")
+	os.Chmod(scriptPath, 0755)
+
+	// Map memory choice to numeric ID
+	memoryMap := map[string]string{
+		"obsidian-brain": "1",
+		"vibekanban":     "2",
+		"engram":         "3",
+		"simple":         "4",
+		"none":           "5",
+	}
+	memoryNum := memoryMap[memory]
+	if memoryNum == "" {
+		memoryNum = "5"
+	}
+
+	// Map CI choice to numeric ID
+	ciMap := map[string]string{
+		"github":     "1",
+		"gitlab":     "2",
+		"woodpecker": "3",
+		"none":       "4",
+	}
+	ciNum := ciMap[ci]
+	if ciNum == "" {
+		ciNum = "4"
+	}
+
+	args := []string{scriptPath, "--non-interactive", "--memory=" + memoryNum, "--ci=" + ciNum}
+	if engram {
+		args = append(args, "--engram")
+	}
+
+	if globalProgram != nil {
+		globalProgram.Send(projectInstallLogMsg{line: fmt.Sprintf("Running: bash %s", strings.Join(args, " "))})
+	}
+
+	cmd := exec.Command("bash", args...)
+	cmd.Dir = projectPath
+
+	output, err := cmd.CombinedOutput()
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" && globalProgram != nil {
+			globalProgram.Send(projectInstallLogMsg{line: line})
+		}
+	}
+
+	if err != nil {
+		return fmt.Errorf("init-project.sh failed: %w", err)
+	}
+	return nil
+}
+
+// runSkillAction runs add-skill.sh for install or remove actions on the given skill names
+func runSkillAction(action string, names []string) ([]string, error) {
+	cacheDir := filepath.Join(os.TempDir(), "project-starter-framework-install")
+
+	// Ensure framework is cloned
+	if _, err := os.Stat(cacheDir); os.IsNotExist(err) {
+		cmd := exec.Command("git", "clone", "--depth", "1",
+			"https://github.com/JNZader/project-starter-framework.git", cacheDir)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			return nil, fmt.Errorf("failed to clone framework: %s: %w", string(out), err)
+		}
+	}
+
+	scriptPath := filepath.Join(cacheDir, "scripts", "add-skill.sh")
+	os.Chmod(scriptPath, 0755)
+
+	var logLines []string
+	var errors []string
+
+	for _, name := range names {
+		var args []string
+		if action == "install" {
+			args = []string{scriptPath, "gentleman", name}
+		} else {
+			args = []string{scriptPath, "remove", name}
+		}
+
+		cmd := exec.Command("bash", args...)
+		output, err := cmd.CombinedOutput()
+		outStr := strings.TrimSpace(string(output))
+
+		if err != nil {
+			logLines = append(logLines, fmt.Sprintf("❌ %s: %s", name, err.Error()))
+			errors = append(errors, name)
+		} else {
+			logLines = append(logLines, fmt.Sprintf("✅ %s: OK", name))
+		}
+		if outStr != "" {
+			logLines = append(logLines, "   "+outStr)
+		}
+	}
+
+	if len(errors) > 0 {
+		return logLines, fmt.Errorf("%d skill(s) failed: %s", len(errors), strings.Join(errors, ", "))
+	}
+	return logLines, nil
+}
+
+// RunProjectInitScript exposes runProjectInitScript for CLI usage
+func RunProjectInitScript(projectPath, memory, ci string, engram bool) error {
+	return runProjectInitScript(projectPath, memory, ci, engram)
+}
+
+// RunSkillAction exposes runSkillAction for CLI usage
+func RunSkillAction(action string, names []string) ([]string, error) {
+	return runSkillAction(action, names)
 }

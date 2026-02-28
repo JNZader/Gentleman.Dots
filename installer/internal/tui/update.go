@@ -2,7 +2,9 @@ package tui
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -47,6 +49,22 @@ type (
 		stepID string
 		err    error
 	}
+
+	// Project init messages
+	projectInstallStartMsg    struct{}
+	projectInstallLogMsg      struct{ line string }
+	projectInstallCompleteMsg struct{ err error }
+
+	// Skill manager messages
+	skillsLoadedMsg struct {
+		available []string
+		installed []string
+		err       error
+	}
+	skillActionCompleteMsg struct {
+		logLines []string
+		err      error
+	}
 )
 
 // Init implements tea.Model
@@ -71,6 +89,43 @@ func loadBackupsCmd() tea.Cmd {
 	}
 }
 
+// expandPath expands a leading ~/ to the user's home directory
+func expandPath(p string) string {
+	if strings.HasPrefix(p, "~/") {
+		home, err := os.UserHomeDir()
+		if err == nil {
+			return filepath.Join(home, p[2:])
+		}
+	}
+	return p
+}
+
+// ExpandPath exposes expandPath for CLI usage
+func ExpandPath(p string) string {
+	return expandPath(p)
+}
+
+// detectStack detects the project stack from indicator files in the given directory
+func detectStack(path string) string {
+	indicators := map[string]string{
+		"angular.json":    "angular",
+		"package.json":    "node",
+		"go.mod":          "go",
+		"Cargo.toml":      "rust",
+		"pom.xml":         "java",
+		"pyproject.toml":  "python",
+		"requirements.txt": "python",
+		"Gemfile":         "ruby",
+		"composer.json":   "php",
+	}
+	for file, stack := range indicators {
+		if _, err := os.Stat(filepath.Join(path, file)); err == nil {
+			return stack
+		}
+	}
+	return "unknown"
+}
+
 // Update implements tea.Model
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -84,7 +139,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tickMsg:
 		// Animate spinner during installation
-		if m.Screen == ScreenInstalling {
+		if m.Screen == ScreenInstalling || m.Screen == ScreenProjectInstalling || m.SkillLoading {
 			m.SpinnerFrame++
 		}
 		// Continue ticking for animations
@@ -160,6 +215,49 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.CurrentStep++
 		return m, m.runNextStep()
 
+	case projectInstallStartMsg:
+		return m, m.runProjectInit()
+
+	case projectInstallLogMsg:
+		m.ProjectLogLines = append(m.ProjectLogLines, msg.line)
+		if len(m.ProjectLogLines) > 30 {
+			m.ProjectLogLines = m.ProjectLogLines[len(m.ProjectLogLines)-30:]
+		}
+		return m, nil
+
+	case projectInstallCompleteMsg:
+		if msg.err != nil {
+			m.ErrorMsg = msg.err.Error()
+		}
+		m.Screen = ScreenProjectResult
+		return m, nil
+
+	case skillsLoadedMsg:
+		m.SkillLoading = false
+		if msg.err != nil {
+			m.SkillLoadError = msg.err.Error()
+		} else {
+			if msg.available != nil {
+				m.SkillList = msg.available
+			}
+			m.InstalledSkills = msg.installed
+			// Initialize selection booleans
+			if m.Screen == ScreenSkillInstall {
+				m.SkillSelected = make([]bool, len(m.SkillList))
+			} else if m.Screen == ScreenSkillRemove {
+				m.SkillSelected = make([]bool, len(m.InstalledSkills))
+			}
+		}
+		return m, nil
+
+	case skillActionCompleteMsg:
+		m.SkillResultLog = msg.logLines
+		if msg.err != nil {
+			m.ErrorMsg = msg.err.Error()
+		}
+		m.Screen = ScreenSkillResult
+		return m, nil
+
 	case needsExecProcessMsg:
 		// This step needs to run with tea.ExecProcess for interactive input
 		return m, tea.ExecProcess(msg.cmd, func(err error) tea.Msg {
@@ -177,6 +275,86 @@ func execInteractiveCmd(stepID string, name string, args ...string) tea.Cmd {
 	return tea.ExecProcess(c, func(err error) tea.Msg {
 		return execFinishedMsg{stepID: stepID, err: err}
 	})
+}
+
+// runProjectInit returns a tea.Cmd that executes the project initialization
+func (m Model) runProjectInit() tea.Cmd {
+	path := expandPath(m.ProjectPathInput)
+	memory := m.ProjectMemory
+	ci := m.ProjectCI
+	engram := m.ProjectEngram
+	return func() tea.Msg {
+		err := runProjectInitScript(path, memory, ci, engram)
+		return projectInstallCompleteMsg{err: err}
+	}
+}
+
+// loadSkillsCmd returns a tea.Cmd that fetches the skill catalog
+func loadSkillsCmd() tea.Cmd {
+	return func() tea.Msg {
+		available, installed, err := fetchSkillCatalog()
+		return skillsLoadedMsg{available: available, installed: installed, err: err}
+	}
+}
+
+// loadInstalledSkillsCmd returns a tea.Cmd that fetches only installed skills
+func loadInstalledSkillsCmd() tea.Cmd {
+	return func() tea.Msg {
+		_, installed, err := fetchSkillCatalog()
+		return skillsLoadedMsg{available: nil, installed: installed, err: err}
+	}
+}
+
+// fetchSkillCatalog clones the Gentleman-Skills repo and reads skill directories
+func fetchSkillCatalog() ([]string, []string, error) {
+	cacheDir := filepath.Join(os.TempDir(), "gentleman-skills-cache")
+	// Check cache freshness (1 hour)
+	if info, err := os.Stat(cacheDir); err == nil {
+		if time.Since(info.ModTime()) < time.Hour {
+			return readSkillDirs(cacheDir)
+		}
+		os.RemoveAll(cacheDir)
+	}
+	// Clone
+	cmd := exec.Command("git", "clone", "--depth", "1", "https://github.com/Gentleman-Programming/Gentleman-Skills.git", cacheDir)
+	if err := cmd.Run(); err != nil {
+		return nil, nil, fmt.Errorf("failed to clone skills repo: %w", err)
+	}
+	return readSkillDirs(cacheDir)
+}
+
+// readSkillDirs reads available and installed skill directories
+func readSkillDirs(cacheDir string) ([]string, []string, error) {
+	var available []string
+	entries, err := os.ReadDir(cacheDir)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, e := range entries {
+		if e.IsDir() && !strings.HasPrefix(e.Name(), ".") {
+			available = append(available, e.Name())
+		}
+	}
+	// Read installed skills from home directory
+	var installed []string
+	home, _ := os.UserHomeDir()
+	skillsDir := filepath.Join(home, ".claude", "skills")
+	if entries, err := os.ReadDir(skillsDir); err == nil {
+		for _, e := range entries {
+			if e.IsDir() {
+				installed = append(installed, e.Name())
+			}
+		}
+	}
+	return available, installed, nil
+}
+
+// runSkillActionCmd returns a tea.Cmd that runs skill install/remove actions
+func runSkillActionCmd(action string, names []string) tea.Cmd {
+	return func() tea.Msg {
+		logLines, err := runSkillAction(action, names)
+		return skillActionCompleteMsg{logLines: logLines, err: err}
+	}
 }
 
 func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -226,6 +404,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			// Complete/Error screens: space quits the app
 			m.Quitting = true
 			return m, tea.Quit
+		case ScreenProjectPath:
+			// Project path input: space is part of the path, pass through
 		case ScreenTrainerLesson, ScreenTrainerPractice, ScreenTrainerBoss:
 			// Trainer input screens: space is part of the input, pass through
 			// (handled below in screen-specific handlers)
@@ -253,7 +433,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case ScreenMainMenu:
 		return m.handleMainMenuKeys(key)
 
-	case ScreenOSSelect, ScreenTerminalSelect, ScreenFontSelect, ScreenShellSelect, ScreenWMSelect, ScreenNvimSelect, ScreenAIFrameworkConfirm, ScreenAIFrameworkPreset, ScreenGhosttyWarning:
+	case ScreenOSSelect, ScreenTerminalSelect, ScreenFontSelect, ScreenShellSelect, ScreenWMSelect, ScreenNvimSelect, ScreenAIFrameworkConfirm, ScreenAIFrameworkPreset, ScreenGhosttyWarning,
+		ScreenProjectStack, ScreenProjectMemory, ScreenProjectEngram, ScreenProjectCI, ScreenProjectConfirm, ScreenSkillMenu:
 		return m.handleSelectionKeys(key)
 
 	case ScreenAIToolsSelect:
@@ -325,6 +506,32 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case ScreenTrainerBossResult:
 		return m.handleTrainerBossResultKeys(key)
+
+	// Project init screens
+	case ScreenProjectPath:
+		return m.handleProjectPathKeys(key)
+
+	case ScreenProjectResult:
+		if key == "enter" {
+			m.Screen = ScreenMainMenu
+			m.Cursor = 0
+		}
+
+	// Skill manager screens
+	case ScreenSkillBrowse:
+		return m.handleSkillBrowseKeys(key)
+
+	case ScreenSkillInstall:
+		return m.handleSkillInstallKeys(key)
+
+	case ScreenSkillRemove:
+		return m.handleSkillRemoveKeys(key)
+
+	case ScreenSkillResult:
+		if key == "enter" {
+			m.Screen = ScreenSkillMenu
+			m.Cursor = 0
+		}
 
 	case ScreenComplete:
 		switch key {
@@ -421,6 +628,24 @@ func (m Model) handleEscape() (tea.Model, tea.Cmd) {
 		}
 		m.Screen = ScreenTrainerMenu
 		m.TrainerMessage = ""
+	// Project init screens
+	case ScreenProjectPath:
+		m.Screen = ScreenMainMenu
+		m.Cursor = 0
+	case ScreenProjectResult:
+		m.Screen = ScreenMainMenu
+		m.Cursor = 0
+	// Skill manager screens
+	case ScreenSkillMenu:
+		m.Screen = ScreenMainMenu
+		m.Cursor = 0
+	case ScreenSkillBrowse, ScreenSkillInstall, ScreenSkillRemove:
+		m.Screen = ScreenSkillMenu
+		m.Cursor = 0
+		m.SkillScroll = 0
+	case ScreenSkillResult:
+		m.Screen = ScreenSkillMenu
+		m.Cursor = 0
 	// Main menu - quit
 	case ScreenMainMenu:
 		m.Quitting = true
@@ -479,6 +704,20 @@ func (m Model) handleMainMenuKeys(key string) (tea.Model, tea.Cmd) {
 			m.PrevScreen = ScreenMainMenu
 		case strings.Contains(selected, "Restore from Backup") && hasRestoreOption:
 			m.Screen = ScreenRestoreBackup
+			m.Cursor = 0
+		case strings.Contains(selected, "Initialize Project"):
+			m.ProjectPathInput = ""
+			m.ProjectPathError = ""
+			m.ProjectStack = ""
+			m.ProjectMemory = ""
+			m.ProjectEngram = false
+			m.ProjectCI = ""
+			m.ProjectLogLines = nil
+			m.ErrorMsg = ""
+			m.Screen = ScreenProjectPath
+			m.Cursor = 0
+		case strings.Contains(selected, "Skill Manager"):
+			m.Screen = ScreenSkillMenu
 			m.Cursor = 0
 		case strings.Contains(selected, "Exit"):
 			m.Quitting = true
@@ -597,6 +836,32 @@ func (m Model) goBackInstallStep() (tea.Model, tea.Cmd) {
 		// Back to categories — restore cursor to this category
 		m.Screen = ScreenAIFrameworkCategories
 		m.Cursor = m.SelectedModuleCategory
+
+	// Project init screens - back navigation
+	case ScreenProjectStack:
+		m.Screen = ScreenProjectPath
+		m.Cursor = 0
+	case ScreenProjectMemory:
+		m.Screen = ScreenProjectStack
+		m.Cursor = 0
+	case ScreenProjectEngram:
+		m.Screen = ScreenProjectMemory
+		m.Cursor = 0
+	case ScreenProjectCI:
+		if m.ProjectMemory == "obsidian-brain" {
+			m.Screen = ScreenProjectEngram
+		} else {
+			m.Screen = ScreenProjectMemory
+		}
+		m.Cursor = 0
+	case ScreenProjectConfirm:
+		m.Screen = ScreenProjectCI
+		m.Cursor = 0
+
+	// Skill manager screens - back navigation
+	case ScreenSkillMenu:
+		m.Screen = ScreenMainMenu
+		m.Cursor = 0
 	}
 
 	return m, nil
@@ -738,6 +1003,85 @@ func (m Model) handleSelection() (tea.Model, tea.Cmd) {
 			m.Cursor = 0
 		} else {
 			return m.proceedToBackupOrInstall()
+		}
+
+	// Project init selection screens
+	case ScreenProjectStack:
+		stacks := []string{"angular", "node", "go", "python", "rust", "java", "ruby", "php", "other"}
+		if m.Cursor < len(stacks) {
+			m.ProjectStack = stacks[m.Cursor]
+		}
+		m.Screen = ScreenProjectMemory
+		m.Cursor = 0
+
+	case ScreenProjectMemory:
+		memories := []string{"obsidian-brain", "vibekanban", "engram", "simple", "none"}
+		if m.Cursor < len(memories) {
+			m.ProjectMemory = memories[m.Cursor]
+		}
+		if m.ProjectMemory == "obsidian-brain" {
+			m.Screen = ScreenProjectEngram
+		} else {
+			m.Screen = ScreenProjectCI
+		}
+		m.Cursor = 0
+
+	case ScreenProjectEngram:
+		m.ProjectEngram = m.Cursor == 0
+		m.Screen = ScreenProjectCI
+		m.Cursor = 0
+
+	case ScreenProjectCI:
+		cis := []string{"github", "gitlab", "woodpecker", "none"}
+		if m.Cursor < len(cis) {
+			m.ProjectCI = cis[m.Cursor]
+		}
+		m.Screen = ScreenProjectConfirm
+		m.Cursor = 0
+
+	case ScreenProjectConfirm:
+		if m.Cursor == 0 { // Confirm
+			m.Choices.InitProject = true
+			m.Choices.ProjectPath = m.ProjectPathInput
+			m.Choices.ProjectStack = m.ProjectStack
+			m.Choices.ProjectMemory = m.ProjectMemory
+			m.Choices.ProjectCI = m.ProjectCI
+			m.Choices.ProjectEngram = m.ProjectEngram
+			m.ProjectLogLines = []string{}
+			m.Screen = ScreenProjectInstalling
+			return m, func() tea.Msg { return projectInstallStartMsg{} }
+		} else { // Cancel
+			m.Screen = ScreenMainMenu
+			m.Cursor = 0
+		}
+
+	// Skill manager menu
+	case ScreenSkillMenu:
+		switch m.Cursor {
+		case 0: // Browse
+			m.SkillLoading = true
+			m.SkillLoadError = ""
+			m.Screen = ScreenSkillBrowse
+			m.Cursor = 0
+			m.SkillScroll = 0
+			return m, loadSkillsCmd()
+		case 1: // Install
+			m.SkillLoading = true
+			m.SkillLoadError = ""
+			m.Screen = ScreenSkillInstall
+			m.Cursor = 0
+			m.SkillScroll = 0
+			return m, loadSkillsCmd()
+		case 2: // Remove
+			m.SkillLoading = true
+			m.SkillLoadError = ""
+			m.Screen = ScreenSkillRemove
+			m.Cursor = 0
+			m.SkillScroll = 0
+			return m, loadInstalledSkillsCmd()
+		case 4: // Back (after separator at 3)
+			m.Screen = ScreenMainMenu
+			m.Cursor = 0
 		}
 
 	case ScreenAIFrameworkPreset:
@@ -2313,5 +2657,181 @@ func (m Model) handleTrainerBossResultKeys(key string) (tea.Model, tea.Cmd) {
 		m.TrainerMessage = ""
 	}
 
+	return m, nil
+}
+
+// handleProjectPathKeys handles text input for the project path screen
+func (m Model) handleProjectPathKeys(key string) (tea.Model, tea.Cmd) {
+	switch key {
+	case "backspace":
+		if len(m.ProjectPathInput) > 0 {
+			// Remove last rune safely
+			runes := []rune(m.ProjectPathInput)
+			m.ProjectPathInput = string(runes[:len(runes)-1])
+		}
+		m.ProjectPathError = ""
+	case "enter":
+		// Validate path
+		path := expandPath(m.ProjectPathInput)
+		if path == "" {
+			m.ProjectPathError = "Path cannot be empty"
+			return m, nil
+		}
+		absPath, err := filepath.Abs(path)
+		if err != nil {
+			m.ProjectPathError = "Invalid path: " + err.Error()
+			return m, nil
+		}
+		info, err := os.Stat(absPath)
+		if err != nil {
+			m.ProjectPathError = "Directory not found: " + absPath
+			return m, nil
+		}
+		if !info.IsDir() {
+			m.ProjectPathError = "Path is not a directory: " + absPath
+			return m, nil
+		}
+		// Valid path - store and advance
+		m.ProjectPathInput = absPath
+		m.ProjectPathError = ""
+		m.ProjectStack = detectStack(absPath)
+		m.Screen = ScreenProjectStack
+		m.Cursor = 0
+	case " ":
+		m.ProjectPathInput += " "
+		m.ProjectPathError = ""
+	default:
+		// Append printable character
+		if len(key) == 1 && key[0] >= 32 && key[0] <= 126 {
+			m.ProjectPathInput += key
+			m.ProjectPathError = ""
+		}
+	}
+	return m, nil
+}
+
+// handleSkillBrowseKeys handles the skill browse screen (read-only scroll)
+func (m Model) handleSkillBrowseKeys(key string) (tea.Model, tea.Cmd) {
+	options := m.GetCurrentOptions()
+	switch key {
+	case "up", "k":
+		if m.Cursor > 0 {
+			m.Cursor--
+			if m.Cursor < len(options) && strings.HasPrefix(options[m.Cursor], "───") {
+				if m.Cursor > 0 {
+					m.Cursor--
+				}
+			}
+		}
+	case "down", "j":
+		if m.Cursor < len(options)-1 {
+			m.Cursor++
+			if m.Cursor < len(options) && strings.HasPrefix(options[m.Cursor], "───") {
+				if m.Cursor < len(options)-1 {
+					m.Cursor++
+				}
+			}
+		}
+	case "enter":
+		if m.Cursor < len(options) && strings.Contains(options[m.Cursor], "Back") {
+			m.Screen = ScreenSkillMenu
+			m.Cursor = 0
+			m.SkillScroll = 0
+		}
+	}
+	return m, nil
+}
+
+// handleSkillInstallKeys handles multi-select for skill installation
+func (m Model) handleSkillInstallKeys(key string) (tea.Model, tea.Cmd) {
+	options := m.GetCurrentOptions()
+	switch key {
+	case "up", "k":
+		if m.Cursor > 0 {
+			m.Cursor--
+			if m.Cursor < len(options) && strings.HasPrefix(options[m.Cursor], "───") {
+				if m.Cursor > 0 {
+					m.Cursor--
+				}
+			}
+		}
+	case "down", "j":
+		if m.Cursor < len(options)-1 {
+			m.Cursor++
+			if m.Cursor < len(options) && strings.HasPrefix(options[m.Cursor], "───") {
+				if m.Cursor < len(options)-1 {
+					m.Cursor++
+				}
+			}
+		}
+	case "enter":
+		if m.Cursor < len(m.SkillList) && m.Cursor < len(m.SkillSelected) {
+			// Toggle selection
+			m.SkillSelected[m.Cursor] = !m.SkillSelected[m.Cursor]
+		} else if m.Cursor < len(options) && strings.Contains(options[m.Cursor], "Confirm") {
+			// Collect selected skills
+			var selected []string
+			for i, sel := range m.SkillSelected {
+				if sel && i < len(m.SkillList) {
+					selected = append(selected, m.SkillList[i])
+				}
+			}
+			if len(selected) == 0 {
+				return m, nil // No-op if nothing selected
+			}
+			m.Choices.SkillInstall = selected
+			m.ErrorMsg = ""
+			m.SkillResultLog = []string{}
+			m.Screen = ScreenSkillResult
+			return m, runSkillActionCmd("install", selected)
+		}
+	}
+	return m, nil
+}
+
+// handleSkillRemoveKeys handles multi-select for skill removal
+func (m Model) handleSkillRemoveKeys(key string) (tea.Model, tea.Cmd) {
+	options := m.GetCurrentOptions()
+	switch key {
+	case "up", "k":
+		if m.Cursor > 0 {
+			m.Cursor--
+			if m.Cursor < len(options) && strings.HasPrefix(options[m.Cursor], "───") {
+				if m.Cursor > 0 {
+					m.Cursor--
+				}
+			}
+		}
+	case "down", "j":
+		if m.Cursor < len(options)-1 {
+			m.Cursor++
+			if m.Cursor < len(options) && strings.HasPrefix(options[m.Cursor], "───") {
+				if m.Cursor < len(options)-1 {
+					m.Cursor++
+				}
+			}
+		}
+	case "enter":
+		if m.Cursor < len(m.InstalledSkills) && m.Cursor < len(m.SkillSelected) {
+			// Toggle selection
+			m.SkillSelected[m.Cursor] = !m.SkillSelected[m.Cursor]
+		} else if m.Cursor < len(options) && strings.Contains(options[m.Cursor], "Confirm") {
+			// Collect selected skills
+			var selected []string
+			for i, sel := range m.SkillSelected {
+				if sel && i < len(m.InstalledSkills) {
+					selected = append(selected, m.InstalledSkills[i])
+				}
+			}
+			if len(selected) == 0 {
+				return m, nil // No-op if nothing selected
+			}
+			m.Choices.SkillRemove = selected
+			m.ErrorMsg = ""
+			m.SkillResultLog = []string{}
+			m.Screen = ScreenSkillResult
+			return m, runSkillActionCmd("remove", selected)
+		}
+	}
 	return m, nil
 }
