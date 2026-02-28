@@ -66,8 +66,9 @@ const (
 	// Project Init screens
 	ScreenProjectPath       // Text input: project directory
 	ScreenProjectStack      // Single-select: detected stack confirmation/override
-	ScreenProjectMemory     // Single-select: memory module
-	ScreenProjectEngram     // Yes/No: add Engram alongside Obsidian Brain
+	ScreenProjectMemory          // Single-select: memory module
+	ScreenProjectObsidianInstall // Offer to install Obsidian app if not detected
+	ScreenProjectEngram          // Yes/No: add Engram alongside Obsidian Brain
 	ScreenProjectCI         // Single-select: CI provider
 	ScreenProjectConfirm    // Summary before execution
 	ScreenProjectInstalling // Progress log
@@ -122,8 +123,9 @@ type UserChoices struct {
 	ProjectPath   string
 	ProjectStack  string
 	ProjectMemory string
-	ProjectCI     string
-	ProjectEngram bool
+	ProjectCI        string
+	ProjectEngram    bool
+	InstallObsidian  bool
 }
 
 // Model is the main application state
@@ -484,6 +486,8 @@ func (m Model) GetCurrentOptions() []string {
 		return []string{"Angular", "Node.js", "Go", "Python", "Rust", "Java", "Ruby", "PHP", "Other"}
 	case ScreenProjectMemory:
 		return []string{"🧠 Obsidian Brain", "📋 VibeKanban", "🧠 Engram", "📝 Simple", "❌ None"}
+	case ScreenProjectObsidianInstall:
+		return []string{"Yes, install Obsidian", "No, continue without it"}
 	case ScreenProjectEngram:
 		return []string{"Yes, add Engram too", "No, just Obsidian Brain"}
 	case ScreenProjectCI:
@@ -615,6 +619,8 @@ func (m Model) GetScreenTitle() string {
 		return "📦 Initialize Project — Stack"
 	case ScreenProjectMemory:
 		return "📦 Initialize Project — Memory Module"
+	case ScreenProjectObsidianInstall:
+		return "📦 Initialize Project — Obsidian App"
 	case ScreenProjectEngram:
 		return "📦 Initialize Project — Engram Add-on"
 	case ScreenProjectCI:
@@ -687,6 +693,8 @@ func (m Model) GetScreenDescription() string {
 		return "Select your project's tech stack"
 	case ScreenProjectMemory:
 		return "Choose an AI memory module for your project"
+	case ScreenProjectObsidianInstall:
+		return "Obsidian app not detected. Install it for Obsidian Brain?"
 	case ScreenProjectEngram:
 		return "Add Engram persistent memory alongside Obsidian Brain?"
 	case ScreenProjectCI:
@@ -744,30 +752,58 @@ func filterSkillsByCategory(skills []SkillInfo, category string) []SkillInfo {
 	return result
 }
 
-// buildSkillBrowseOptions builds options for the browse screen with group headers and installed indicators
-func (m Model) buildSkillBrowseOptions() []string {
-	curated := filterSkillsByCategory(m.SkillCatalog, "curated")
-	community := filterSkillsByCategory(m.SkillCatalog, "community")
-
-	opts := make([]string, 0, len(m.SkillCatalog)+6)
-	if len(curated) > 0 {
-		opts = append(opts, "📦 Curated")
-		for _, s := range curated {
-			badge := "  "
-			if s.Installed {
-				badge = "✓ "
-			}
-			desc := truncateDesc(s.Description, 60)
-			if desc != "" {
-				opts = append(opts, badge+s.Name+" — "+desc)
-			} else {
-				opts = append(opts, badge+s.Name)
+// getSkillCategoryOrder returns the distinct categories in display order
+func getSkillCategoryOrder(skills []SkillInfo) []string {
+	seen := make(map[string]bool)
+	var order []string
+	// Fixed order: curated first, community second, then local groups
+	for _, prio := range []string{"curated", "community"} {
+		for _, s := range skills {
+			if s.Category == prio && !seen[prio] {
+				seen[prio] = true
+				order = append(order, prio)
+				break
 			}
 		}
 	}
-	if len(community) > 0 {
-		opts = append(opts, "🌐 Community")
-		for _, s := range community {
+	// Collect local categories in order of appearance
+	for _, s := range skills {
+		if !seen[s.Category] {
+			seen[s.Category] = true
+			order = append(order, s.Category)
+		}
+	}
+	return order
+}
+
+// skillCategoryHeader returns the display header for a category
+func skillCategoryHeader(category string) string {
+	switch category {
+	case "curated":
+		return "📦 Curated"
+	case "community":
+		return "🌐 Community"
+	case "local":
+		return "🏠 Local"
+	default:
+		if strings.HasPrefix(category, "local:") {
+			group := strings.TrimPrefix(category, "local:")
+			return "🏠 " + strings.ToUpper(group[:1]) + group[1:]
+		}
+		return "📁 " + category
+	}
+}
+
+// buildSkillBrowseOptions builds options for the browse screen with group headers and installed indicators
+func (m Model) buildSkillBrowseOptions() []string {
+	opts := make([]string, 0, len(m.SkillCatalog)+10)
+	for _, cat := range getSkillCategoryOrder(m.SkillCatalog) {
+		group := filterSkillsByCategory(m.SkillCatalog, cat)
+		if len(group) == 0 {
+			continue
+		}
+		opts = append(opts, skillCategoryHeader(cat))
+		for _, s := range group {
 			badge := "  "
 			if s.Installed {
 				badge = "✓ "
@@ -787,31 +823,21 @@ func (m Model) buildSkillBrowseOptions() []string {
 
 // buildSkillInstallOptions builds options for the install screen (only NOT-installed skills)
 func (m Model) buildSkillInstallOptions() []string {
-	var notInstalled []SkillInfo
-	for _, s := range m.SkillCatalog {
-		if !s.Installed {
-			notInstalled = append(notInstalled, s)
-		}
-	}
-	curated := filterSkillsByCategory(notInstalled, "curated")
-	community := filterSkillsByCategory(notInstalled, "community")
+	notInstalled := m.getNotInstalledSkills()
 
-	opts := make([]string, 0, len(notInstalled)+6)
-	opts = append(opts, "✅ Select All")
-	if len(curated) > 0 {
-		opts = append(opts, "📦 Curated")
-		for _, s := range curated {
-			desc := truncateDesc(s.Description, 60)
-			if desc != "" {
-				opts = append(opts, s.Name+" — "+desc)
-			} else {
-				opts = append(opts, s.Name)
-			}
-		}
+	if len(notInstalled) == 0 {
+		return []string{"✅ All skills are already installed!", "─────────────", "← Back"}
 	}
-	if len(community) > 0 {
-		opts = append(opts, "🌐 Community")
-		for _, s := range community {
+
+	opts := make([]string, 0, len(notInstalled)+10)
+	opts = append(opts, "✅ Select All")
+	for _, cat := range getSkillCategoryOrder(notInstalled) {
+		group := filterSkillsByCategory(notInstalled, cat)
+		if len(group) == 0 {
+			continue
+		}
+		opts = append(opts, skillCategoryHeader(cat))
+		for _, s := range group {
 			desc := truncateDesc(s.Description, 60)
 			if desc != "" {
 				opts = append(opts, s.Name+" — "+desc)
@@ -827,17 +853,21 @@ func (m Model) buildSkillInstallOptions() []string {
 
 // buildSkillRemoveOptions builds options for the remove screen (only installed skills)
 func (m Model) buildSkillRemoveOptions() []string {
-	var installed []SkillInfo
-	for _, s := range m.SkillCatalog {
-		if s.Installed {
-			installed = append(installed, s)
-		}
+	installed := m.getInstalledSkills()
+
+	if len(installed) == 0 {
+		return []string{"No skills installed", "─────────────", "← Back"}
 	}
 
-	opts := make([]string, 0, len(installed)+4)
-	if len(installed) > 0 {
-		opts = append(opts, "✅ Select All")
-		for _, s := range installed {
+	opts := make([]string, 0, len(installed)+10)
+	opts = append(opts, "✅ Select All")
+	for _, cat := range getSkillCategoryOrder(installed) {
+		group := filterSkillsByCategory(installed, cat)
+		if len(group) == 0 {
+			continue
+		}
+		opts = append(opts, skillCategoryHeader(cat))
+		for _, s := range group {
 			desc := truncateDesc(s.Description, 60)
 			if desc != "" {
 				opts = append(opts, s.Name+" — "+desc)

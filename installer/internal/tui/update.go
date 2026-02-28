@@ -327,8 +327,9 @@ func fetchSkillCatalog() ([]SkillInfo, error) {
 		}
 	}
 
-	// Scan curated/ and community/ subdirs
+	// Scan curated/ and community/ subdirs from Gentleman-Skills repo
 	var skills []SkillInfo
+	repoSkillPaths := make(map[string]bool) // track repo skill FullPaths to avoid duplicates
 	for _, category := range []string{"curated", "community"} {
 		dir := filepath.Join(centralDir, category)
 		entries, err := os.ReadDir(dir)
@@ -345,14 +346,13 @@ func fetchSkillCatalog() ([]SkillInfo, error) {
 				continue
 			}
 
-			// Parse frontmatter
 			name, desc := parseSkillFrontmatter(skillFile)
 			if name == "" {
 				name = entry.Name()
 			}
 
-			// Check installed status in both ~/.claude/skills/ and ~/.agents/skills/
 			installed := isSkillInstalled(home, name)
+			repoSkillPaths[skillDir] = true
 
 			skills = append(skills, SkillInfo{
 				Name:        name,
@@ -365,7 +365,130 @@ func fetchSkillCatalog() ([]SkillInfo, error) {
 		}
 	}
 
+	// Scan ~/.claude/skills/ for local skills NOT from the repo
+	claudeSkillsDir := filepath.Join(home, ".claude", "skills")
+	localSkills := scanLocalSkills(claudeSkillsDir, centralDir, repoSkillPaths)
+	skills = append(skills, localSkills...)
+
 	return skills, nil
+}
+
+// scanLocalSkills walks ~/.claude/skills/ looking for SKILL.md files in directories
+// that are NOT symlinks pointing to the Gentleman-Skills repo.
+func scanLocalSkills(claudeDir, repoDir string, repoSkillPaths map[string]bool) []SkillInfo {
+	var skills []SkillInfo
+	entries, err := os.ReadDir(claudeDir)
+	if err != nil {
+		return nil
+	}
+
+	for _, entry := range entries {
+		entryPath := filepath.Join(claudeDir, entry.Name())
+
+		// Skip files and the _TEMPLATE.md
+		if !entry.IsDir() && entry.Type()&os.ModeSymlink == 0 {
+			continue
+		}
+
+		// If it's a symlink, resolve and check if it points to the repo
+		if entry.Type()&os.ModeSymlink != 0 {
+			target, err := filepath.EvalSymlinks(entryPath)
+			if err != nil {
+				continue
+			}
+			if strings.HasPrefix(target, repoDir) {
+				continue // already covered by curated/community scan
+			}
+			// Non-repo symlink — treat as local skill
+			scanLocalSkillDir(entryPath, target, entry.Name(), "", repoSkillPaths, &skills)
+			continue
+		}
+
+		// Real directory — check for SKILL.md directly or scan sub-dirs
+		info, err := entry.Info()
+		if err != nil || !info.IsDir() {
+			continue
+		}
+
+		skillFile := filepath.Join(entryPath, "SKILL.md")
+		if _, err := os.Stat(skillFile); err == nil {
+			// Direct skill (e.g. sdd-apply/, prompt-improver/)
+			if repoSkillPaths[entryPath] {
+				continue
+			}
+			name, desc := parseSkillFrontmatter(skillFile)
+			if name == "" {
+				name = entry.Name()
+			}
+			skills = append(skills, SkillInfo{
+				Name:        name,
+				Description: desc,
+				Category:    "local",
+				DirName:     entry.Name(),
+				FullPath:    entryPath,
+				Installed:   true, // it's in ~/.claude/skills/, so it's installed
+			})
+		} else {
+			// Parent directory with sub-skills (e.g. backend/api-gateway/, frontend/astro-ssr/)
+			subEntries, err := os.ReadDir(entryPath)
+			if err != nil {
+				continue
+			}
+			for _, sub := range subEntries {
+				if !sub.IsDir() && sub.Type()&os.ModeSymlink == 0 {
+					continue
+				}
+				subPath := filepath.Join(entryPath, sub.Name())
+				subSkillFile := filepath.Join(subPath, "SKILL.md")
+				if _, err := os.Stat(subSkillFile); err != nil {
+					continue
+				}
+				if repoSkillPaths[subPath] {
+					continue
+				}
+				name, desc := parseSkillFrontmatter(subSkillFile)
+				if name == "" {
+					name = sub.Name()
+				}
+				skills = append(skills, SkillInfo{
+					Name:        name,
+					Description: desc,
+					Category:    "local:" + entry.Name(),
+					DirName:     sub.Name(),
+					FullPath:    subPath,
+					Installed:   true,
+				})
+			}
+		}
+	}
+	return skills
+}
+
+// scanLocalSkillDir adds a single local skill directory to the list
+func scanLocalSkillDir(entryPath, resolvedPath, dirName, parentGroup string, repoSkillPaths map[string]bool, skills *[]SkillInfo) {
+	if repoSkillPaths[resolvedPath] {
+		return
+	}
+	skillFile := filepath.Join(resolvedPath, "SKILL.md")
+	if _, err := os.Stat(skillFile); err != nil {
+		return
+	}
+	name, desc := parseSkillFrontmatter(skillFile)
+	if name == "" {
+		name = dirName
+	}
+	cat := "local"
+	if parentGroup != "" {
+		cat = "local:" + parentGroup
+	}
+	*skills = append(*skills, SkillInfo{
+		Name:        name,
+		Description: desc,
+		Category:    cat,
+		DirName:     dirName,
+		FullPath:    resolvedPath,
+		Installed:   true,
+	})
 }
 
 // parseSkillFrontmatter does simple line-by-line parsing of SKILL.md YAML frontmatter.
@@ -660,7 +783,7 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleMainMenuKeys(key)
 
 	case ScreenOSSelect, ScreenTerminalSelect, ScreenFontSelect, ScreenShellSelect, ScreenWMSelect, ScreenNvimSelect, ScreenAIFrameworkConfirm, ScreenAIFrameworkPreset, ScreenGhosttyWarning,
-		ScreenProjectStack, ScreenProjectMemory, ScreenProjectEngram, ScreenProjectCI, ScreenProjectConfirm, ScreenSkillMenu:
+		ScreenProjectStack, ScreenProjectMemory, ScreenProjectObsidianInstall, ScreenProjectEngram, ScreenProjectCI, ScreenProjectConfirm, ScreenSkillMenu:
 		return m.handleSelectionKeys(key)
 
 	case ScreenAIToolsSelect:
@@ -1073,8 +1196,15 @@ func (m Model) goBackInstallStep() (tea.Model, tea.Cmd) {
 	case ScreenProjectMemory:
 		m.Screen = ScreenProjectStack
 		m.Cursor = 0
-	case ScreenProjectEngram:
+	case ScreenProjectObsidianInstall:
 		m.Screen = ScreenProjectMemory
+		m.Cursor = 0
+	case ScreenProjectEngram:
+		if !system.CommandExists("obsidian") {
+			m.Screen = ScreenProjectObsidianInstall
+		} else {
+			m.Screen = ScreenProjectMemory
+		}
 		m.Cursor = 0
 	case ScreenProjectCI:
 		if m.ProjectMemory == "obsidian-brain" {
@@ -1249,10 +1379,19 @@ func (m Model) handleSelection() (tea.Model, tea.Cmd) {
 			m.ProjectMemory = memories[m.Cursor]
 		}
 		if m.ProjectMemory == "obsidian-brain" {
-			m.Screen = ScreenProjectEngram
+			if !system.CommandExists("obsidian") {
+				m.Screen = ScreenProjectObsidianInstall
+			} else {
+				m.Screen = ScreenProjectEngram
+			}
 		} else {
 			m.Screen = ScreenProjectCI
 		}
+		m.Cursor = 0
+
+	case ScreenProjectObsidianInstall:
+		m.Choices.InstallObsidian = m.Cursor == 0
+		m.Screen = ScreenProjectEngram
 		m.Cursor = 0
 
 	case ScreenProjectEngram:
@@ -3077,7 +3216,15 @@ func (m Model) handleProjectPathKeys(key string) (tea.Model, tea.Cmd) {
 // isSkillGroupHeader returns true if the option text is a group header or separator
 func isSkillGroupHeader(opt string) bool {
 	return strings.HasPrefix(opt, "📦") || strings.HasPrefix(opt, "🌐") ||
+		strings.HasPrefix(opt, "🏠") || strings.HasPrefix(opt, "📁") ||
 		strings.HasPrefix(opt, "───") || strings.HasPrefix(opt, "✅ Select All")
+}
+
+// isSkillItem returns true if the option is an actual skill (not header, separator, etc.)
+func isSkillItem(opt string) bool {
+	return !isSkillGroupHeader(opt) && !strings.HasPrefix(opt, "───") &&
+		!strings.Contains(opt, "Confirm") && !strings.Contains(opt, "Back") &&
+		!strings.HasPrefix(opt, "✅ All skills") && !strings.HasPrefix(opt, "No skills")
 }
 
 // skillOptionToIndex maps a cursor position in the options list to an index into SkillSelected.
@@ -3086,21 +3233,78 @@ func skillOptionToIndex(options []string, cursor int) int {
 	if cursor < 0 || cursor >= len(options) {
 		return -1
 	}
-	opt := options[cursor]
-	if isSkillGroupHeader(opt) || strings.HasPrefix(opt, "───") ||
-		strings.Contains(opt, "Confirm") || strings.Contains(opt, "Back") {
+	if !isSkillItem(options[cursor]) {
 		return -1
 	}
 	// Count actual skill items before this cursor position
 	idx := 0
 	for i := 0; i < cursor; i++ {
-		o := options[i]
-		if !isSkillGroupHeader(o) && !strings.HasPrefix(o, "───") &&
-			!strings.Contains(o, "Confirm") && !strings.Contains(o, "Back") {
+		if isSkillItem(options[i]) {
 			idx++
 		}
 	}
 	return idx
+}
+
+// skillGroupRange returns the range of SkillSelected indices for a category header at the given cursor.
+// Returns (start, end) where end is exclusive. Returns (-1, -1) if cursor is not on a category header.
+func skillGroupRange(options []string, cursor int) (int, int) {
+	if cursor < 0 || cursor >= len(options) {
+		return -1, -1
+	}
+	opt := options[cursor]
+	// Must be a category header icon (📦, 🌐, 🏠, 📁) but NOT Select All or separator
+	if !strings.HasPrefix(opt, "📦") && !strings.HasPrefix(opt, "🌐") &&
+		!strings.HasPrefix(opt, "🏠") && !strings.HasPrefix(opt, "📁") {
+		return -1, -1
+	}
+
+	// Count skill items BEFORE this header → that's start index
+	start := 0
+	for i := 0; i < cursor; i++ {
+		if isSkillItem(options[i]) {
+			start++
+		}
+	}
+
+	// Count skill items AFTER this header until next header/separator/end
+	end := start
+	for i := cursor + 1; i < len(options); i++ {
+		o := options[i]
+		if strings.HasPrefix(o, "📦") || strings.HasPrefix(o, "🌐") ||
+			strings.HasPrefix(o, "🏠") || strings.HasPrefix(o, "📁") ||
+			strings.HasPrefix(o, "───") {
+			break
+		}
+		if isSkillItem(o) {
+			end++
+		}
+	}
+
+	if end == start {
+		return -1, -1
+	}
+	return start, end
+}
+
+// skillGroupCheck returns a checkbox string for a group range: [✓] all, [ ] none, [-] partial
+func skillGroupCheck(selected []bool, start, end int) string {
+	allOn := true
+	anyOn := false
+	for i := start; i < end && i < len(selected); i++ {
+		if selected[i] {
+			anyOn = true
+		} else {
+			allOn = false
+		}
+	}
+	if allOn {
+		return "[✓]"
+	}
+	if anyOn {
+		return "[-]"
+	}
+	return "[ ]"
 }
 
 // handleSkillBrowseKeys handles the skill browse screen (read-only scroll with viewport)
@@ -3167,7 +3371,12 @@ func (m Model) handleSkillInstallKeys(key string) (tea.Model, tea.Cmd) {
 	case "enter", " ":
 		if m.Cursor < len(options) {
 			opt := options[m.Cursor]
-			if strings.HasPrefix(opt, "✅ Select All") {
+			if strings.Contains(opt, "Back") {
+				m.Screen = ScreenSkillMenu
+				m.Cursor = 0
+				m.SkillScroll = 0
+				return m, nil
+			} else if strings.HasPrefix(opt, "✅ Select All") {
 				// Toggle all
 				allSelected := true
 				for _, sel := range m.SkillSelected {
@@ -3194,6 +3403,18 @@ func (m Model) handleSkillInstallKeys(key string) (tea.Model, tea.Cmd) {
 				m.SkillResultLog = []string{}
 				m.Screen = ScreenSkillResult
 				return m, installSkillActionCmd(selected)
+			} else if start, end := skillGroupRange(options, m.Cursor); start >= 0 {
+				// Toggle entire category
+				allOn := true
+				for i := start; i < end && i < len(m.SkillSelected); i++ {
+					if !m.SkillSelected[i] {
+						allOn = false
+						break
+					}
+				}
+				for i := start; i < end && i < len(m.SkillSelected); i++ {
+					m.SkillSelected[i] = !allOn
+				}
 			} else {
 				// Toggle individual skill
 				idx := skillOptionToIndex(options, m.Cursor)
@@ -3237,7 +3458,12 @@ func (m Model) handleSkillRemoveKeys(key string) (tea.Model, tea.Cmd) {
 	case "enter", " ":
 		if m.Cursor < len(options) {
 			opt := options[m.Cursor]
-			if strings.HasPrefix(opt, "✅ Select All") {
+			if strings.Contains(opt, "Back") {
+				m.Screen = ScreenSkillMenu
+				m.Cursor = 0
+				m.SkillScroll = 0
+				return m, nil
+			} else if strings.HasPrefix(opt, "✅ Select All") {
 				// Toggle all
 				allSelected := true
 				for _, sel := range m.SkillSelected {
@@ -3264,6 +3490,18 @@ func (m Model) handleSkillRemoveKeys(key string) (tea.Model, tea.Cmd) {
 				m.SkillResultLog = []string{}
 				m.Screen = ScreenSkillResult
 				return m, removeSkillActionCmd(selected)
+			} else if start, end := skillGroupRange(options, m.Cursor); start >= 0 {
+				// Toggle entire category
+				allOn := true
+				for i := start; i < end && i < len(m.SkillSelected); i++ {
+					if !m.SkillSelected[i] {
+						allOn = false
+						break
+					}
+				}
+				for i := start; i < end && i < len(m.SkillSelected); i++ {
+					m.SkillSelected[i] = !allOn
+				}
 			} else {
 				// Toggle individual skill
 				idx := skillOptionToIndex(options, m.Cursor)

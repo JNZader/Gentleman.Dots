@@ -199,7 +199,8 @@ func TestProjectPathTyping(t *testing.T) {
 }
 
 func TestProjectMemoryConditionalEngram(t *testing.T) {
-	t.Run("obsidian-brain goes to ScreenProjectEngram", func(t *testing.T) {
+	t.Run("obsidian-brain without obsidian installed goes to ScreenProjectObsidianInstall", func(t *testing.T) {
+		// In test env, "obsidian" binary is NOT in PATH, so it goes to install screen
 		m := NewModel()
 		m.Screen = ScreenProjectMemory
 		m.Cursor = 0 // obsidian-brain
@@ -207,11 +208,12 @@ func TestProjectMemoryConditionalEngram(t *testing.T) {
 		result, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 		nm := result.(Model)
 
-		if nm.Screen != ScreenProjectEngram {
-			t.Errorf("expected ScreenProjectEngram, got %d", nm.Screen)
-		}
 		if nm.ProjectMemory != "obsidian-brain" {
 			t.Errorf("expected ProjectMemory='obsidian-brain', got %q", nm.ProjectMemory)
+		}
+		// Obsidian binary not in PATH → goes to install screen
+		if nm.Screen != ScreenProjectObsidianInstall {
+			t.Errorf("expected ScreenProjectObsidianInstall, got %d", nm.Screen)
 		}
 	})
 
@@ -228,6 +230,97 @@ func TestProjectMemoryConditionalEngram(t *testing.T) {
 		}
 		if nm.ProjectMemory != "vibekanban" {
 			t.Errorf("expected ProjectMemory='vibekanban', got %q", nm.ProjectMemory)
+		}
+	})
+}
+
+func TestObsidianInstallSelection(t *testing.T) {
+	t.Run("Yes sets InstallObsidian=true and goes to Engram", func(t *testing.T) {
+		m := NewModel()
+		m.Screen = ScreenProjectObsidianInstall
+		m.Cursor = 0 // Yes
+
+		result, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		nm := result.(Model)
+
+		if !nm.Choices.InstallObsidian {
+			t.Error("expected InstallObsidian=true")
+		}
+		if nm.Screen != ScreenProjectEngram {
+			t.Errorf("expected ScreenProjectEngram, got %d", nm.Screen)
+		}
+	})
+
+	t.Run("No sets InstallObsidian=false and goes to Engram", func(t *testing.T) {
+		m := NewModel()
+		m.Screen = ScreenProjectObsidianInstall
+		m.Cursor = 1 // No
+
+		result, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		nm := result.(Model)
+
+		if nm.Choices.InstallObsidian {
+			t.Error("expected InstallObsidian=false")
+		}
+		if nm.Screen != ScreenProjectEngram {
+			t.Errorf("expected ScreenProjectEngram, got %d", nm.Screen)
+		}
+	})
+}
+
+func TestObsidianInstallBackNav(t *testing.T) {
+	t.Run("backspace on ObsidianInstall goes back to Memory", func(t *testing.T) {
+		m := NewModel()
+		m.Screen = ScreenProjectObsidianInstall
+
+		result, _ := m.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+		nm := result.(Model)
+
+		if nm.Screen != ScreenProjectMemory {
+			t.Errorf("expected ScreenProjectMemory, got %d", nm.Screen)
+		}
+	})
+
+	t.Run("backspace on Engram goes to ObsidianInstall when obsidian not in PATH", func(t *testing.T) {
+		m := NewModel()
+		m.Screen = ScreenProjectEngram
+
+		result, _ := m.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+		nm := result.(Model)
+
+		// Obsidian not in PATH → back goes to ObsidianInstall
+		if nm.Screen != ScreenProjectObsidianInstall {
+			t.Errorf("expected ScreenProjectObsidianInstall, got %d", nm.Screen)
+		}
+	})
+}
+
+func TestObsidianInstallScreenOptions(t *testing.T) {
+	t.Run("has 2 options", func(t *testing.T) {
+		m := NewModel()
+		m.Screen = ScreenProjectObsidianInstall
+		opts := m.GetCurrentOptions()
+
+		if len(opts) != 2 {
+			t.Errorf("expected 2 options, got %d: %v", len(opts), opts)
+		}
+	})
+
+	t.Run("title is non-empty", func(t *testing.T) {
+		m := NewModel()
+		m.Screen = ScreenProjectObsidianInstall
+		title := m.GetScreenTitle()
+		if title == "" {
+			t.Error("expected non-empty title")
+		}
+	})
+
+	t.Run("description mentions obsidian", func(t *testing.T) {
+		m := NewModel()
+		m.Screen = ScreenProjectObsidianInstall
+		desc := m.GetScreenDescription()
+		if !strings.Contains(strings.ToLower(desc), "obsidian") {
+			t.Errorf("expected description to mention obsidian, got %q", desc)
 		}
 	})
 }
@@ -279,15 +372,16 @@ func TestProjectEscapeBackNavigation(t *testing.T) {
 		}
 	})
 
-	t.Run("ScreenProjectEngram → Backspace → ScreenProjectMemory", func(t *testing.T) {
+	t.Run("ScreenProjectEngram → Backspace → ScreenProjectObsidianInstall (obsidian not in PATH)", func(t *testing.T) {
 		m := NewModel()
 		m.Screen = ScreenProjectEngram
 
 		result, _ := m.Update(tea.KeyMsg{Type: tea.KeyBackspace})
 		nm := result.(Model)
 
-		if nm.Screen != ScreenProjectMemory {
-			t.Errorf("expected ScreenProjectMemory, got %d", nm.Screen)
+		// Obsidian not in PATH → back goes to ObsidianInstall
+		if nm.Screen != ScreenProjectObsidianInstall {
+			t.Errorf("expected ScreenProjectObsidianInstall, got %d", nm.Screen)
 		}
 	})
 
@@ -404,6 +498,7 @@ func TestGetScreenTitleProjectScreens(t *testing.T) {
 		ScreenProjectPath,
 		ScreenProjectStack,
 		ScreenProjectMemory,
+		ScreenProjectObsidianInstall,
 		ScreenProjectEngram,
 		ScreenProjectCI,
 		ScreenProjectConfirm,

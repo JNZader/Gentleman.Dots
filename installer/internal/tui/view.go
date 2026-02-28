@@ -115,7 +115,7 @@ func (m Model) View() string {
 	// Project init screens
 	case ScreenProjectPath:
 		s.WriteString(m.renderProjectPath())
-	case ScreenProjectStack, ScreenProjectMemory, ScreenProjectEngram, ScreenProjectCI:
+	case ScreenProjectStack, ScreenProjectMemory, ScreenProjectObsidianInstall, ScreenProjectEngram, ScreenProjectCI:
 		s.WriteString(m.renderSelection())
 	case ScreenProjectConfirm:
 		s.WriteString(m.renderProjectConfirm())
@@ -2420,12 +2420,6 @@ func (m Model) renderSkillInstall() string {
 			s.WriteString("\n")
 			continue
 		}
-		// Group headers
-		if strings.HasPrefix(opt, "📦") || strings.HasPrefix(opt, "🌐") {
-			s.WriteString(InfoStyle.Render("  " + opt))
-			s.WriteString("\n")
-			continue
-		}
 
 		cursor := "  "
 		style := UnselectedStyle
@@ -2441,6 +2435,10 @@ func (m Model) renderSkillInstall() string {
 			if m.SkillSelected[idx] {
 				check = "[✓]"
 			}
+			s.WriteString(style.Render(fmt.Sprintf("%s%s %s", cursor, check, opt)))
+		} else if gStart, gEnd := skillGroupRange(options, i); gStart >= 0 {
+			// Category header — show group selection state
+			check := skillGroupCheck(m.SkillSelected, gStart, gEnd)
 			s.WriteString(style.Render(fmt.Sprintf("%s%s %s", cursor, check, opt)))
 		} else {
 			s.WriteString(style.Render(cursor + opt))
@@ -2538,6 +2536,10 @@ func (m Model) renderSkillRemove() string {
 			if m.SkillSelected[idx] {
 				check = "[✓]"
 			}
+			s.WriteString(style.Render(fmt.Sprintf("%s%s %s", cursor, check, opt)))
+		} else if gStart, gEnd := skillGroupRange(options, i); gStart >= 0 {
+			// Category header — show group selection state
+			check := skillGroupCheck(m.SkillSelected, gStart, gEnd)
 			s.WriteString(style.Render(fmt.Sprintf("%s%s %s", cursor, check, opt)))
 		} else {
 			s.WriteString(style.Render(cursor + opt))

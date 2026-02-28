@@ -982,7 +982,37 @@ func stepInstallNvim(m *Model) error {
 	repoDir := "Gentleman.Dots"
 	stepID := "nvim"
 
-	// Obsidian path
+	// Obsidian app installation (if user opted in)
+	if m.Choices.InstallObsidian {
+		SendLog(stepID, "Installing Obsidian app...")
+		var obsResult *system.ExecResult
+		switch m.SystemInfo.OS {
+		case system.OSMac:
+			obsResult = system.RunBrewWithLogs("install --cask obsidian", nil, func(line string) {
+				SendLog(stepID, line)
+			})
+		case system.OSArch:
+			obsResult = system.RunSudoWithLogs("pacman -S --noconfirm obsidian", nil, func(line string) {
+				SendLog(stepID, line)
+			})
+		case system.OSDebian, system.OSLinux:
+			obsResult = system.RunWithLogs("flatpak install -y flathub md.obsidian.Obsidian", nil, func(line string) {
+				SendLog(stepID, line)
+			})
+		case system.OSFedora:
+			obsResult = system.RunWithLogs("flatpak install -y flathub md.obsidian.Obsidian", nil, func(line string) {
+				SendLog(stepID, line)
+			})
+		}
+		if obsResult != nil && obsResult.Error != nil {
+			SendLog(stepID, "⚠ Obsidian install failed: "+obsResult.Error.Error())
+			SendLog(stepID, "You can install Obsidian manually from https://obsidian.md")
+		} else {
+			SendLog(stepID, "✓ Obsidian installed")
+		}
+	}
+
+	// Obsidian directories for Neovim plugin
 	SendLog(stepID, "Creating Obsidian directories...")
 	obsidianDir := filepath.Join(homeDir, ".config/obsidian")
 	system.EnsureDir(obsidianDir)

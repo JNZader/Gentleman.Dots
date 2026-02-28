@@ -281,7 +281,7 @@ func TestGetCurrentOptionsSkillInstall(t *testing.T) {
 }
 
 func TestGetCurrentOptionsSkillRemove(t *testing.T) {
-	t.Run("SkillRemove options = Select All + installed skills + separator + confirm", func(t *testing.T) {
+	t.Run("SkillRemove options = Select All + category header + installed skills + separator + confirm", func(t *testing.T) {
 		m := NewModel()
 		m.Screen = ScreenSkillRemove
 		m.SkillCatalog = []SkillInfo{
@@ -290,9 +290,9 @@ func TestGetCurrentOptionsSkillRemove(t *testing.T) {
 
 		opts := m.GetCurrentOptions()
 
-		// Select All + 1 skill + separator + confirm = 4
-		if len(opts) != 4 {
-			t.Errorf("expected 4 options, got %d: %v", len(opts), opts)
+		// Select All + header + 1 skill + separator + confirm = 5
+		if len(opts) != 5 {
+			t.Errorf("expected 5 options, got %d: %v", len(opts), opts)
 		}
 		if !strings.Contains(opts[len(opts)-1], "Confirm") {
 			t.Errorf("last option should contain 'Confirm', got %q", opts[len(opts)-1])
