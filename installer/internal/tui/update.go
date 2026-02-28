@@ -3223,7 +3223,7 @@ func isSkillGroupHeader(opt string) bool {
 // isSkillItem returns true if the option is an actual skill (not header, separator, etc.)
 func isSkillItem(opt string) bool {
 	return !isSkillGroupHeader(opt) && !strings.HasPrefix(opt, "───") &&
-		!strings.Contains(opt, "Confirm") && !strings.Contains(opt, "Back") &&
+		!strings.Contains(opt, "Confirm") && !strings.Contains(opt, "← Back") &&
 		!strings.HasPrefix(opt, "✅ All skills") && !strings.HasPrefix(opt, "No skills")
 }
 
@@ -3331,7 +3331,7 @@ func (m Model) handleSkillBrowseKeys(key string) (tea.Model, tea.Cmd) {
 			}
 		}
 	case "enter":
-		if m.Cursor < len(options) && strings.Contains(options[m.Cursor], "Back") {
+		if m.Cursor < len(options) && strings.Contains(options[m.Cursor], "← Back") {
 			m.Screen = ScreenSkillMenu
 			m.Cursor = 0
 			m.SkillScroll = 0
@@ -3371,7 +3371,7 @@ func (m Model) handleSkillInstallKeys(key string) (tea.Model, tea.Cmd) {
 	case "enter", " ":
 		if m.Cursor < len(options) {
 			opt := options[m.Cursor]
-			if strings.Contains(opt, "Back") {
+			if strings.Contains(opt, "← Back") {
 				m.Screen = ScreenSkillMenu
 				m.Cursor = 0
 				m.SkillScroll = 0
@@ -3458,7 +3458,7 @@ func (m Model) handleSkillRemoveKeys(key string) (tea.Model, tea.Cmd) {
 	case "enter", " ":
 		if m.Cursor < len(options) {
 			opt := options[m.Cursor]
-			if strings.Contains(opt, "Back") {
+			if strings.Contains(opt, "← Back") {
 				m.Screen = ScreenSkillMenu
 				m.Cursor = 0
 				m.SkillScroll = 0

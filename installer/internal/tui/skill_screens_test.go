@@ -419,3 +419,89 @@ func TestTruncateDesc(t *testing.T) {
 		}
 	})
 }
+
+func TestSkillRemoveCategoryToggleWithLocalSkills(t *testing.T) {
+	t.Run("Backend header toggles category instead of going back", func(t *testing.T) {
+		m := NewModel()
+		m.Screen = ScreenSkillRemove
+		m.SkillCatalog = []SkillInfo{
+			{Name: "api-gateway", Description: "API Gateway", Category: "local:backend", Installed: true},
+			{Name: "bff-concepts", Description: "BFF pattern", Category: "local:backend", Installed: true},
+		}
+		m.SkillSelected = make([]bool, len(m.getInstalledSkills()))
+
+		opts := m.GetCurrentOptions()
+		// Find the "🏠 Backend" header
+		headerIdx := -1
+		for i, o := range opts {
+			if strings.Contains(o, "Backend") && strings.HasPrefix(o, "🏠") {
+				headerIdx = i
+				break
+			}
+		}
+		if headerIdx == -1 {
+			t.Fatal("Backend header not found in options")
+		}
+
+		// Press Enter on header — should NOT go back to SkillMenu
+		m.Cursor = headerIdx
+		result, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		nm := result.(Model)
+
+		if nm.Screen != ScreenSkillRemove {
+			t.Errorf("expected to stay on ScreenSkillRemove, got screen %d (went back!)", nm.Screen)
+		}
+		// All backend skills should be selected
+		for i := range nm.SkillSelected {
+			if !nm.SkillSelected[i] {
+				t.Errorf("expected SkillSelected[%d] to be true", i)
+			}
+		}
+	})
+
+	t.Run("toggling bff-concepts in local:backend does not panic", func(t *testing.T) {
+		m := NewModel()
+		m.Screen = ScreenSkillRemove
+		m.SkillCatalog = []SkillInfo{
+			{Name: "react-19", Description: "React 19 patterns", Category: "curated", Installed: true},
+			{Name: "typescript", Description: "TypeScript types", Category: "curated", Installed: true},
+			{Name: "api-gateway", Description: "API Gateway", Category: "local:backend", Installed: true},
+			{Name: "bff-concepts", Description: "BFF pattern", Category: "local:backend", Installed: true},
+			{Name: "chi-router", Description: "Chi router", Category: "local:backend", Installed: true},
+		}
+		installed := m.getInstalledSkills()
+		m.SkillSelected = make([]bool, len(installed))
+
+		opts := m.GetCurrentOptions()
+		t.Logf("options: %v", opts)
+		t.Logf("SkillSelected len: %d, installed len: %d", len(m.SkillSelected), len(installed))
+
+		// Find bff-concepts in options
+		bffIdx := -1
+		for i, o := range opts {
+			if strings.Contains(o, "bff-concepts") {
+				bffIdx = i
+				break
+			}
+		}
+		if bffIdx == -1 {
+			t.Fatal("bff-concepts not found in options")
+		}
+		t.Logf("bff-concepts at option index %d", bffIdx)
+
+		// Position cursor on bff-concepts and press Enter
+		m.Cursor = bffIdx
+		result, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		nm := result.(Model)
+
+		// Verify it toggled correctly
+		skillIdx := skillOptionToIndex(opts, bffIdx)
+		t.Logf("skillOptionToIndex for bff-concepts: %d", skillIdx)
+		if skillIdx < 0 || skillIdx >= len(nm.SkillSelected) {
+			t.Fatalf("skillOptionToIndex returned %d, SkillSelected len %d", skillIdx, len(nm.SkillSelected))
+		}
+		if !nm.SkillSelected[skillIdx] {
+			t.Error("expected bff-concepts to be selected after toggle")
+		}
+	})
+}
