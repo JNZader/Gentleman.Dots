@@ -13,6 +13,9 @@ import (
 // DefaultRepoDir is the default directory name for the cloned repository.
 const DefaultRepoDir = "Gentleman.Dots"
 
+// DefaultRepoURL is the default git URL for the dots repository.
+const DefaultRepoURL = "https://github.com/Gentleman-Programming/Gentleman.Dots.git"
+
 // Screen represents the current screen being displayed
 type Screen int
 
@@ -150,6 +153,7 @@ type Model struct {
 	SystemInfo  *system.SystemInfo
 	Choices     UserChoices
 	RepoDir     string // Directory name for the cloned repo (overridable for forks)
+	RepoURL     string // Git URL for the dots repo (overridable for forks)
 	Steps       []InstallStep
 	CurrentStep int
 	Cursor      int
@@ -241,6 +245,7 @@ func NewModel() Model {
 		SystemInfo:              system.Detect(),
 		Choices:                 UserChoices{},
 		RepoDir:                 DefaultRepoDir,
+		RepoURL:                 DefaultRepoURL,
 		Steps:                   []InstallStep{},
 		CurrentStep:             0,
 		Cursor:                  0,

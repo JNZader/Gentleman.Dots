@@ -6,10 +6,10 @@ The Gentleman.Dots installer includes a complete AI tools and framework integrat
 
 - [Overview](#overview)
 - [Installation Flow](#installation-flow)
-  - [Step 7: AI Tools Selection](#step-7-ai-tools-selection)
-  - [Step 8a: Framework Confirmation](#step-8a-framework-confirmation)
-  - [Step 8b: Preset Selection](#step-8b-preset-selection)
-  - [Step 8c: Custom Category Drill-Down](#step-8c-custom-category-drill-down)
+  - [Step 8: AI Tools Selection](#step-8-ai-tools-selection)
+  - [Step 9a: Framework Confirmation](#step-9a-framework-confirmation)
+  - [Step 9b: Preset Selection](#step-9b-preset-selection)
+  - [Step 9c: Custom Category Drill-Down](#step-9c-custom-category-drill-down)
 - [Viewport Scrolling](#viewport-scrolling)
 - [SDD Choice: OpenSpec vs Agent Teams Lite](#sdd-choice-openspec-vs-agent-teams-lite)
 - [Non-Interactive CLI](#non-interactive-cli)
@@ -23,24 +23,24 @@ The Gentleman.Dots installer includes a complete AI tools and framework integrat
 
 ## Overview
 
-The AI integration adds two new installation steps to the wizard:
+The AI integration adds two installation steps to the wizard:
 
 | Step | Screen | Description |
 |------|--------|-------------|
-| **Step 7** | AI Tools Selection | Multi-select: Claude Code, OpenCode, Gemini CLI, GitHub Copilot |
-| **Step 8** | AI Framework | Preset or custom module selection from the [project-starter-framework](https://github.com/JNZader/project-starter-framework) |
+| **Step 8** | AI Tools Selection | Multi-select: Claude Code, OpenCode, Gemini CLI, GitHub Copilot, Codex CLI |
+| **Step 9** | AI Framework | Preset or custom module selection from the [project-starter-framework](https://github.com/JNZader/project-starter-framework) |
 
-These steps appear after Neovim configuration (Step 6) and before the backup confirmation screen.
+These steps appear after Zed editor (Step 7) and before the backup confirmation screen.
 
 ---
 
 ## Installation Flow
 
-### Step 7: AI Tools Selection
+### Step 8: AI Tools Selection
 
 **Screen:** `ScreenAIToolsSelect`
 
-Multi-select checkboxes for 4 AI coding tools:
+Multi-select checkboxes for 5 AI coding tools:
 
 | Tool | ID | Install Method |
 |------|-----|----------------|
@@ -48,6 +48,7 @@ Multi-select checkboxes for 4 AI coding tools:
 | OpenCode | `opencode` | `curl -fsSL https://opencode.ai/install \| bash` + configs, theme |
 | Gemini CLI | `gemini` | `npm install -g @google/gemini-cli` |
 | GitHub Copilot | `copilot` | `gh extension install github/gh-copilot` |
+| Codex CLI | `codex` | `npm install -g @openai/codex` + AGENTS.md config |
 
 **Behavior:**
 - Toggle individual tools with `Enter` or `Space`
@@ -72,7 +73,11 @@ Multi-select checkboxes for 4 AI coding tools:
 - Gentleman theme
 - Skills directory
 
-### Step 8a: Framework Confirmation
+**What gets installed for Codex CLI:**
+- Binary via npm (`@openai/codex`)
+- `AGENTS.md` copied to `~/.codex/` (Codex reads AGENTS.md for instructions)
+
+### Step 9a: Framework Confirmation
 
 **Screen:** `ScreenAIFrameworkConfirm`
 
@@ -81,7 +86,7 @@ Simple Yes/No to install the [project-starter-framework](https://github.com/JNZa
 - **Yes** → proceeds to preset selection
 - **No** → skips framework → proceeds to backup/install
 
-### Step 8b: Preset Selection
+### Step 9b: Preset Selection
 
 **Screen:** `ScreenAIFrameworkPreset`
 
@@ -101,13 +106,13 @@ Custom is the **first option** (index 0), followed by a separator, then 6 preset
 - Selecting a **preset** sets `AIFrameworkPreset` and proceeds to backup/install
 - Selecting **Custom** initializes the category selection map and enters the drill-down
 
-### Step 8c: Custom Category Drill-Down
+### Step 9c: Custom Category Drill-Down
 
-The custom selection uses a **two-level drill-down** instead of a flat checkbox list, making it possible to navigate 209 individual modules across 7 categories.
+The custom selection uses a **two-level drill-down** instead of a flat checkbox list, making it possible to navigate 206 individual modules across 6 categories.
 
 #### Category Menu (`ScreenAIFrameworkCategories`)
 
-Shows 7 categories with live selection counts. No checkboxes — cursor navigation only. Press `Enter` to drill into a category.
+Shows 6 categories with live selection counts. No checkboxes — cursor navigation only. Press `Enter` to drill into a category.
 
 ```
 ▸ 🪝 Hooks (2/10 selected)
@@ -115,7 +120,6 @@ Shows 7 categories with live selection counts. No checkboxes — cursor navigati
   🤖 Agents (3/80 selected)
   🎯 Skills (5/85 selected)
   📐 SDD (1/2 selected)
-  🧩 Plugins (1/3 selected)
   🔌 MCP (2/9 selected)
   ─────────────
   ✅ Confirm selection
@@ -126,7 +130,7 @@ Shows 7 categories with live selection counts. No checkboxes — cursor navigati
 Shows individual items within a category with checkboxes. The title dynamically shows the category name and icon.
 
 ```
-Step 8: 🪝 Hooks
+Step 9: 🪝 Hooks
 
 ▸ [✓] Block Dangerous Commands
   [ ] Commit Guard
@@ -187,7 +191,7 @@ You can select **one or both**.
 **When Agent Teams Lite is selected:**
 - The installer clones [agent-teams-lite](https://github.com/Gentleman-Programming/agent-teams-lite)
 - Runs `install.sh --agent <tool>` for each supported AI tool
-- Tool mapping: `claude` → `claude-code`, `opencode` → `opencode`, `gemini` → `gemini-cli`
+- Tool mapping: `claude` → `claude-code`, `opencode` → `opencode`, `gemini` → `gemini-cli`, `codex` → `codex`
 - GitHub Copilot is not supported by Agent Teams Lite
 
 **When both are selected:**
@@ -209,10 +213,10 @@ gentleman.dots --non-interactive --shell=<shell> [AI options]
 
 | Flag | Values | Description |
 |------|--------|-------------|
-| `--ai-tools=<tools>` | `claude,opencode,gemini,copilot` | AI tools (comma-separated) |
+| `--ai-tools=<tools>` | `claude,opencode,gemini,copilot,codex` | AI tools (comma-separated) |
 | `--ai-framework` | | Install AI coding framework |
 | `--ai-preset=<name>` | `minimal,frontend,backend,fullstack,data,complete` | Framework preset |
-| `--ai-modules=<feats>` | `hooks,commands,skills,agents,sdd,plugins,mcp` | Feature flags (comma-separated) |
+| `--ai-modules=<feats>` | `hooks,commands,skills,agents,sdd,mcp` | Feature flags (comma-separated) |
 | `--agent-teams-lite` | | Install Agent Teams Lite SDD framework |
 
 ### Examples
@@ -220,7 +224,7 @@ gentleman.dots --non-interactive --shell=<shell> [AI options]
 ```bash
 # Full setup with preset
 gentleman.dots --non-interactive --shell=fish --nvim \
-  --ai-tools=claude,opencode,gemini,copilot --ai-preset=fullstack
+  --ai-tools=claude,opencode,gemini,copilot,codex --ai-preset=fullstack
 
 # Custom feature selection with Agent Teams Lite
 gentleman.dots --non-interactive --shell=zsh --ai-tools=claude --ai-framework \
@@ -237,9 +241,9 @@ gentleman.dots --dry-run --non-interactive --shell=zsh \
 
 ### Validation
 
-- AI tools validated against: `{claude, opencode, gemini, copilot}`
+- AI tools validated against: `{claude, opencode, gemini, copilot, codex}`
 - Presets validated against: `{minimal, frontend, backend, fullstack, data, complete}`
-- Feature flags validated against: `{hooks, commands, skills, agents, sdd, plugins, mcp}`
+- Feature flags validated against: `{hooks, commands, skills, agents, sdd, mcp}`
 - Framework is auto-enabled if `--ai-preset`, `--ai-modules`, or `--agent-teams-lite` is provided
 
 ---
@@ -248,14 +252,14 @@ gentleman.dots --dry-run --non-interactive --shell=zsh \
 
 Each preset maps to a set of feature flags passed to `setup-global.sh --features=`:
 
-| Preset | hooks | commands | skills | agents | sdd | plugins | mcp |
-|--------|:-----:|:--------:|:------:|:------:|:---:|:-------:|:---:|
-| **Minimal** | ✅ | ✅ | | | ✅ | | |
-| **Frontend** | ✅ | ✅ | ✅ | ✅ | ✅ | | |
-| **Backend** | ✅ | ✅ | ✅ | ✅ | ✅ | | |
-| **Fullstack** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Data** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Complete** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Preset | hooks | commands | skills | agents | sdd | mcp |
+|--------|:-----:|:--------:|:------:|:------:|:---:|:---:|
+| **Minimal** | ✅ | ✅ | | | ✅ | |
+| **Frontend** | ✅ | ✅ | ✅ | ✅ | ✅ | |
+| **Backend** | ✅ | ✅ | ✅ | ✅ | ✅ | |
+| **Fullstack** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Data** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Complete** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 > **Note:** Presets install OpenSpec SDD by default (via the `sdd` feature). For Agent Teams Lite, use Custom mode or the `--agent-teams-lite` CLI flag.
 
@@ -264,11 +268,11 @@ Each preset maps to a set of feature flags passed to `setup-global.sh --features
 ## UX Flow Diagram
 
 ```
-ScreenNvimSelect (Step 6)
-  └→ ScreenAIToolsSelect (Step 7)
-       ├→ [Confirm with tools] → ScreenAIFrameworkConfirm (Step 8a)
-       │     ├→ Yes → ScreenAIFrameworkPreset (Step 8b)
-       │     │     ├→ Custom (idx 0) → ScreenAIFrameworkCategories (Step 8c)
+ScreenZedSelect (Step 7)
+  └→ ScreenAIToolsSelect (Step 8)
+       ├→ [Confirm with tools] → ScreenAIFrameworkConfirm (Step 9a)
+       │     ├→ Yes → ScreenAIFrameworkPreset (Step 9b)
+       │     │     ├→ Custom (idx 0) → ScreenAIFrameworkCategories (Step 9c)
        │     │     │     ├→ [Enter category] → ScreenAIFrameworkCategoryItems
        │     │     │     │     ├→ [Toggle items] → stays in items
        │     │     │     │     └→ [Esc/Back] → back to Categories (cursor preserved)
@@ -282,10 +286,10 @@ ScreenNvimSelect (Step 6)
 
 ## Progress Bar
 
-The step progress indicator shows 8 steps:
+The step progress indicator shows 9 steps:
 
 ```
-✓ OS → ✓ Terminal → ✓ Font → ✓ Shell → ✓ WM → ✓ Nvim → ● AI Tools → ○ Framework
+✓ OS → ✓ Terminal → ✓ Font → ✓ Shell → ✓ WM → ✓ Nvim → ✓ Zed → ● AI Tools → ○ Framework
 ```
 
 All AI screens (tools, framework confirm, preset, categories, category items) show the progress bar.
@@ -297,14 +301,14 @@ All AI screens (tools, framework confirm, preset, categories, category items) sh
 Complete bidirectional navigation through the entire wizard:
 
 ```
-Nvim ← AIToolsSelect ← AIFrameworkConfirm ← AIFrameworkPreset ← AIFrameworkCategories ← AIFrameworkCategoryItems
+Zed ← AIToolsSelect ← AIFrameworkConfirm ← AIFrameworkPreset ← AIFrameworkCategories ← AIFrameworkCategoryItems
 ```
 
 **Special cases:**
 
 | From | Back goes to | Notes |
 |------|-------------|-------|
-| `AIToolsSelect` | `NvimSelect` | Clears `AIToolSelected` and `AITools` |
+| `AIToolsSelect` | `ZedSelect` | Clears `AIToolSelected` and `AITools` |
 | `AIFrameworkConfirm` | `AIToolsSelect` | |
 | `AIFrameworkPreset` | `AIFrameworkConfirm` | |
 | `AIFrameworkCategories` | `AIFrameworkPreset` | Clears `AICategorySelected` map |
@@ -330,6 +334,7 @@ Installs each selected tool independently:
 | **Claude Code** | Install binary, copy CLAUDE.md, settings.json, statusline.sh, output-styles, 10+ skills, mcp-servers template, tweakcc theme, apply theme |
 | **OpenCode** | Install binary, copy opencode.json, gentleman theme, skills |
 | **Gemini CLI** | `npm install -g @google/gemini-cli` |
+| **Codex CLI** | `npm install -g @openai/codex`, copy AGENTS.md to `~/.codex/` |
 | **GitHub Copilot** | `gh extension install github/gh-copilot` |
 
 Individual tool install failures are logged as **warnings**, not errors. The installation continues.

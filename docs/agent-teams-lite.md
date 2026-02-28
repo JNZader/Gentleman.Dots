@@ -34,7 +34,7 @@ Both are SDD implementations available in the installer, but they serve differen
 |--------|----------|-----------------|
 | **Source** | [project-starter-framework](https://github.com/JNZader/project-starter-framework) | [agent-teams-lite](https://github.com/Gentleman-Programming/agent-teams-lite) |
 | **Install method** | `setup-global.sh --features=sdd` | `install.sh --agent <tool>` |
-| **Format** | Part of the larger framework with 203 modules | Standalone, focused on SDD only |
+| **Format** | Part of the larger framework with 206 modules | Standalone, focused on SDD only |
 | **Dependencies** | Installed alongside other framework features | Zero dependencies, just Markdown |
 | **Persistence** | File-based YAML schema in `openspec/` | Engram (recommended), OpenSpec, or none |
 | **Weight** | Heavier (part of full framework) | Lightweight (9 Markdown files) |

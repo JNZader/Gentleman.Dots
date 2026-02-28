@@ -47,8 +47,9 @@
 Una configuración completa de entorno de desarrollo que incluye:
 
 * **Neovim** con LSP, autocompletado y asistentes de IA (Claude Code, Gemini, OpenCode)
-* **Herramientas IA**: Claude Code, OpenCode, Gemini CLI, GitHub Copilot con configs, skills y temas
-* **Framework IA**: 203 módulos (80 agentes, 85 skills, 10 hooks, 20 comandos, 6 servidores MCP) con selección por preset o personalizada
+* **Zed** editor con modo Vim y soporte para agentes IA
+* **Herramientas IA**: Claude Code, OpenCode, Gemini CLI, GitHub Copilot, Codex CLI con configs, skills y temas
+* **Framework IA**: 206 módulos (80 agentes, 85 skills, 10 hooks, 20 comandos, 9 servidores MCP) con selección por preset o personalizada
 * **Shells**: Fish, Zsh, Nushell
 * **Multiplexores de terminal**: Tmux, Zellij
 * **Emuladores de terminal**: Alacritty, WezTerm, Kitty, Ghostty
@@ -136,11 +137,11 @@ El instalador TUI te guía para seleccionar tus herramientas preferidas y maneja
 
 ## 🤖 Herramientas IA y Framework
 
-El instalador incluye un sistema completo de integración con IA (Pasos 7-8):
+El instalador incluye un sistema completo de integración con IA (Pasos 8-9):
 
-### Herramientas IA (Paso 7)
+### Herramientas IA (Paso 8)
 
-Selección múltiple de 4 herramientas de IA:
+Selección múltiple de 5 herramientas de IA:
 
 | Herramienta | Qué se instala |
 |-------------|---------------|
@@ -148,10 +149,11 @@ Selección múltiple de 4 herramientas de IA:
 | **OpenCode** | Binario + agente Gentleman + orquestador SDD + tema |
 | **Gemini CLI** | CLI vía npm |
 | **GitHub Copilot** | Extensión gh |
+| **Codex CLI** | Binario vía npm + config AGENTS.md |
 
-### Framework IA (Paso 8)
+### Framework IA (Paso 9)
 
-Elegí un preset o personalizá entre **203 módulos** en 6 categorías:
+Elegí un preset o personalizá entre **206 módulos** en 6 categorías:
 
 | Categoría | Módulos | Ejemplos |
 |-----------|--------:|---------|
@@ -160,7 +162,7 @@ Elegí un preset o personalizá entre **203 módulos** en 6 categorías:
 | 🤖 Agentes | 80 | React Pro, DevOps Engineer, Security Auditor |
 | 🎯 Skills | 85 | FastAPI, Spring Boot 4, Kubernetes, PyTorch |
 | 📐 SDD | 2 | OpenSpec, Agent Teams Lite |
-| 🔌 MCP | 6 | Context7, Engram, Jira, Figma, Notion |
+| 🔌 MCP | 9 | Context7, Engram, Jira, Atlassian, Figma, Notion, Brave Search, Sentry, Cloudflare |
 
 **Presets**: Minimal, Frontend, Backend, Fullstack, Data, Complete
 
@@ -190,13 +192,64 @@ Podés iniciarlo desde el menú principal: **Vim Mastery Trainer**
 
 ---
 
+## 📦 Inicialización de Proyectos
+
+Bootstrapeá cualquier proyecto con soporte de framework IA:
+
+```bash
+# Interactivo
+gentleman-dots  # → Menú Principal → Initialize Project
+
+# No interactivo
+gentleman-dots --non-interactive --init-project \
+  --project-path=/ruta/al/proyecto \
+  --project-memory=obsidian-brain \
+  --project-ci=github --project-engram
+```
+
+**Módulos de memoria**: Obsidian Brain, VibeKanban, Engram, Simple, None
+**Proveedores CI**: GitHub Actions, GitLab CI, Woodpecker, None
+
+---
+
+## 🎯 Gestor de Skills
+
+Navegá, instalá y eliminá skills de agentes IA del catálogo Gentleman-Skills:
+
+```bash
+# Interactivo
+gentleman-dots  # → Menú Principal → Skill Manager
+
+# No interactivo
+gentleman-dots --non-interactive --skill-install=react-19,typescript,tailwind-4
+gentleman-dots --non-interactive --skill-remove=react-19
+```
+
+Los skills se organizan por categoría (curated, community, plugin) y se enlazan a `~/.claude/skills/`.
+
+---
+
+## 🔀 Soporte para Forks
+
+Sobrescribí la URL de clone y el directorio para apuntar a tu propio fork:
+
+```bash
+# Vía variables de entorno
+REPO_URL=https://github.com/TuUsuario/TuFork.git REPO_DIR=TuFork gentleman-dots
+
+# Vía flags CLI
+gentleman-dots --repo-url=https://github.com/TuUsuario/TuFork.git --repo-dir=TuFork
+```
+
+---
+
 ## Documentación
 
 | Documento                                                          | Descripción                                                  |
 | ------------------------------------------------------------------ | ------------------------------------------------------------ |
 | [Guía del instalador TUI](docs/tui-installer.md)                   | Funciones interactivas, navegación, backup y restore        |
 | [Herramientas IA y Framework](docs/ai-tools-integration.md)        | Selección de IA, presets, drill-down por categoría, flags CLI |
-| [Módulos del Framework IA](docs/ai-framework-modules.md)           | Referencia completa de los 203 módulos en 6 categorías      |
+| [Módulos del Framework IA](docs/ai-framework-modules.md)           | Referencia completa de los 206 módulos en 6 categorías      |
 | [Agent Teams Lite](docs/agent-teams-lite.md)                       | Framework SDD liviano con 9 sub-agentes                     |
 | [Configuración de IA](docs/ai-configuration.md)                    | Claude Code, OpenCode, Copilot y más                        |
 | [Instalación manual](docs/manual-installation.md)                  | Configuración paso a paso para todas las plataformas        |
@@ -233,11 +286,12 @@ Podés iniciarlo desde el menú principal: **Vim Mastery Trainer**
 | **Tmux**    | Probado en batalla, ampliamente usado |
 | **Zellij**  | Moderno, plugins WebAssembly          |
 
-### Editor
+### Editores
 
 | Herramienta | Descripción                             |
 | ----------- | --------------------------------------- |
 | **Neovim**  | Config LazyVim con LSP, completado e IA |
+| **Zed**     | Editor de alto rendimiento con modo Vim y soporte IA |
 
 ### Prompts
 
@@ -256,11 +310,13 @@ Javi.Dots/
 │   ├── internal/            # TUI, sistema y entrenador
 │   └── e2e/                 # Tests E2E con Docker
 ├── docs/                    # Documentación
+├── openspec/                # Artefactos de Spec-Driven Development
 ├── skills/                  # Skills de agentes IA
 │
 ├── GentlemanNvim/           # Configuración Neovim
 ├── GentlemanClaude/         # Config Claude Code + skills
 ├── GentlemanOpenCode/       # Config OpenCode
+├── GentlemanZed/            # Config Zed (modo Vim + IA)
 │
 ├── GentlemanFish/
 ├── GentlemanZsh/

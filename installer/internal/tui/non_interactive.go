@@ -9,7 +9,8 @@ import (
 
 // RunNonInteractive executes the installation without TUI.
 // repoDir overrides the default repo directory name used for cloning.
-func RunNonInteractive(choices UserChoices, repoDir string) error {
+// repoURL overrides the default git URL for the dots repository.
+func RunNonInteractive(choices UserChoices, repoDir string, repoURL string) error {
 	// Enable non-interactive mode for logging
 	SetNonInteractiveMode(true)
 
@@ -28,6 +29,7 @@ func RunNonInteractive(choices UserChoices, repoDir string) error {
 		SystemInfo: sysInfo,
 		Choices:    choices,
 		RepoDir:    repoDir,
+		RepoURL:    repoURL,
 		LogLines:   []string{},
 	}
 

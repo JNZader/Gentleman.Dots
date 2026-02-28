@@ -44,8 +44,9 @@
 A complete development environment configuration including:
 
 - **Neovim** with LSP, autocompletion, and AI assistants (Claude Code, Gemini, OpenCode)
-- **AI Tools**: Claude Code, OpenCode, Gemini CLI, GitHub Copilot with configs, skills, and themes
-- **AI Framework**: 203 modules (80 agents, 85 skills, 10 hooks, 20 commands, 6 MCP servers) with preset or custom selection
+- **Zed** editor with Vim mode and AI agent support
+- **AI Tools**: Claude Code, OpenCode, Gemini CLI, GitHub Copilot, Codex CLI with configs, skills, and themes
+- **AI Framework**: 206 modules (80 agents, 85 skills, 10 hooks, 20 commands, 9 MCP servers) with preset or custom selection
 - **Shells**: Fish, Zsh, Nushell
 - **Terminal Multiplexers**: Tmux, Zellij
 - **Terminal Emulators**: Alacritty, WezTerm, Kitty, Ghostty
@@ -131,11 +132,11 @@ The TUI guides you through selecting your preferred tools and handles all the co
 
 ## 🤖 AI Tools & Framework
 
-The installer includes a complete AI integration system (Steps 7-8):
+The installer includes a complete AI integration system (Steps 8-9):
 
-### AI Tools (Step 7)
+### AI Tools (Step 8)
 
-Multi-select from 4 AI coding tools:
+Multi-select from 5 AI coding tools:
 
 | Tool | What Gets Installed |
 |------|-------------------|
@@ -143,10 +144,11 @@ Multi-select from 4 AI coding tools:
 | **OpenCode** | Binary + Gentleman agent + SDD orchestrator + theme |
 | **Gemini CLI** | CLI via npm |
 | **GitHub Copilot** | gh extension |
+| **Codex CLI** | Binary via npm + AGENTS.md config |
 
-### AI Framework (Step 8)
+### AI Framework (Step 9)
 
-Choose a preset or customize from **203 modules** across 6 categories:
+Choose a preset or customize from **206 modules** across 6 categories:
 
 | Category | Modules | Examples |
 |----------|--------:|---------|
@@ -155,7 +157,7 @@ Choose a preset or customize from **203 modules** across 6 categories:
 | 🤖 Agents | 80 | React Pro, DevOps Engineer, Security Auditor |
 | 🎯 Skills | 85 | FastAPI, Spring Boot 4, Kubernetes, PyTorch |
 | 📐 SDD | 2 | OpenSpec, Agent Teams Lite |
-| 🔌 MCP | 6 | Context7, Engram, Jira, Figma, Notion |
+| 🔌 MCP | 9 | Context7, Engram, Jira, Atlassian, Figma, Notion, Brave Search, Sentry, Cloudflare |
 
 **Presets**: Minimal, Frontend, Backend, Fullstack, Data, Complete
 
@@ -185,13 +187,64 @@ Launch it from the main menu: **Vim Mastery Trainer**
 
 ---
 
+## 📦 Project Initialization
+
+Bootstrap any project with AI framework support:
+
+```bash
+# Interactive
+gentleman-dots  # → Main Menu → Initialize Project
+
+# Non-interactive
+gentleman-dots --non-interactive --init-project \
+  --project-path=/path/to/project \
+  --project-memory=obsidian-brain \
+  --project-ci=github --project-engram
+```
+
+**Memory modules**: Obsidian Brain, VibeKanban, Engram, Simple, None
+**CI providers**: GitHub Actions, GitLab CI, Woodpecker, None
+
+---
+
+## 🎯 Skill Manager
+
+Browse, install, and remove AI agent skills from the Gentleman-Skills catalog:
+
+```bash
+# Interactive
+gentleman-dots  # → Main Menu → Skill Manager
+
+# Non-interactive
+gentleman-dots --non-interactive --skill-install=react-19,typescript,tailwind-4
+gentleman-dots --non-interactive --skill-remove=react-19
+```
+
+Skills are organized by category (curated, community, plugin) and symlinked to `~/.claude/skills/`.
+
+---
+
+## 🔀 Fork Support
+
+Override the clone URL and directory to point to your own fork:
+
+```bash
+# Via environment variables
+REPO_URL=https://github.com/YourUser/YourFork.git REPO_DIR=YourFork gentleman-dots
+
+# Via CLI flags
+gentleman-dots --repo-url=https://github.com/YourUser/YourFork.git --repo-dir=YourFork
+```
+
+---
+
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
 | [TUI Installer Guide](docs/tui-installer.md) | Interactive installer features, navigation, backup/restore |
 | [AI Tools & Framework](docs/ai-tools-integration.md) | AI tools selection, framework presets, category drill-down, CLI flags |
-| [AI Framework Modules](docs/ai-framework-modules.md) | Complete reference of all 203 modules across 6 categories |
+| [AI Framework Modules](docs/ai-framework-modules.md) | Complete reference of all 206 modules across 6 categories |
 | [Agent Teams Lite](docs/agent-teams-lite.md) | Lightweight SDD framework with 9 sub-agents |
 | [AI Configuration](docs/ai-configuration.md) | Claude Code, OpenCode, Copilot, and other AI assistants |
 | [Manual Installation](docs/manual-installation.md) | Step-by-step manual setup for all platforms |
@@ -228,11 +281,12 @@ Launch it from the main menu: **Vim Mastery Trainer**
 | **Tmux** | Battle-tested, widely used, lots of plugins |
 | **Zellij** | Modern, WebAssembly plugins, floating panes |
 
-### Editor
+### Editors
 
 | Tool | Description |
 |------|-------------|
 | **Neovim** | LazyVim config with LSP, completions, AI |
+| **Zed** | High-performance editor with Vim mode and AI agent support |
 
 ### Prompts
 
@@ -251,12 +305,14 @@ Javi.Dots/
 │   ├── internal/            # TUI, system, and trainer packages
 │   └── e2e/                 # Docker-based E2E tests
 ├── docs/                    # Documentation
+├── openspec/                # Spec-Driven Development artifacts
 ├── skills/                  # AI agent skills (repo-specific)
 │
 ├── GentlemanNvim/           # Neovim configuration (LazyVim)
 ├── GentlemanClaude/         # Claude Code config + user skills
 │   └── skills/              # Installable skills (React, Next.js, etc.)
 ├── GentlemanOpenCode/       # OpenCode AI config
+├── GentlemanZed/            # Zed editor config (Vim mode + AI)
 │
 ├── GentlemanFish/           # Fish shell config
 ├── GentlemanZsh/            # Zsh + Oh-My-Zsh + Powerlevel10k

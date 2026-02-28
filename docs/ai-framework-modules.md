@@ -1,6 +1,6 @@
 # AI Framework Module Registry
 
-Complete reference of all 209 modules across 7 categories available in the [project-starter-framework](https://github.com/JNZader/project-starter-framework). These modules are configured via the TUI installer's Custom mode or the `--ai-modules` CLI flag.
+Complete reference of all 206 modules across 6 categories available in the [project-starter-framework](https://github.com/JNZader/project-starter-framework). These modules are configured via the TUI installer's Custom mode or the `--ai-modules` CLI flag.
 
 ## Table of Contents
 
@@ -12,14 +12,13 @@ Complete reference of all 209 modules across 7 categories available in the [proj
 - [Agents (80 items)](#-agents-80-items)
 - [Skills (85 items)](#-skills-85-items)
 - [SDD — Spec-Driven Development (2 items)](#-sdd--spec-driven-development-2-items)
-- [Plugins (3 items)](#-plugins-3-items)
 - [MCP Servers (9 items)](#-mcp-servers-9-items)
 
 ---
 
 ## Overview
 
-The installer presents 209 individual modules organized into 7 categories. In the TUI, you can browse and toggle individual items within each category. However, `setup-global.sh` operates at the **feature level** — selecting ANY item within a category enables that entire feature.
+The installer presents 206 individual modules organized into 6 categories. In the TUI, you can browse and toggle individual items within each category. However, `setup-global.sh` operates at the **feature level** — selecting ANY item within a category enables that entire feature.
 
 ## How Features Work
 
@@ -31,11 +30,12 @@ TUI Category Drill-Down        →    setup-global.sh
 🤖 Agents (1/80 selected)     →    --features=agents
 🎯 Skills (5/85 selected)     →    --features=skills
 📐 SDD: OpenSpec ✓             →    --features=sdd
-🧩 Plugins (1/3 selected)     →    --features=plugins
 🔌 MCP (2/9 selected)         →    --features=mcp
 ```
 
 **Result:** `setup-global.sh --features=hooks,agents,skills,sdd,mcp`
+
+> **Note:** The 5th AI tool, **Codex CLI**, is also supported via `--ai-tools=codex` and `--clis=codex`.
 
 The individual item selection in the TUI is **informational** — it helps you see what's in each category. The actual installation installs ALL items within the enabled features.
 
@@ -50,10 +50,9 @@ The individual item selection in the TUI is **informational** — it helps you s
 | Agents | 🤖 | 80 | `agents` | No |
 | Skills | 🎯 | 85 | `skills` | No |
 | SDD | 📐 | 2 | `sdd` (OpenSpec only) | No |
-| Plugins | 🧩 | 3 | `plugins` | No |
 | MCP Servers | 🔌 | 9 | `mcp` | Yes |
 
-**Total: 209 modules**
+**Total: 206 modules**
 
 ---
 
@@ -466,9 +465,11 @@ See [Agent Teams Lite documentation](agent-teams-lite.md) for details on the Age
 
 ---
 
-## 🧩 Plugins (3 items)
+## 🧩 Plugins (3 items — managed separately)
 
 Plugins are self-contained toolshed extensions that provide specialized capabilities through scripts, skill files, and assets. They are installed to `~/.claude/plugins/` and auto-detected by context in CLAUDE.md.
+
+> **Note:** Plugins are NOT part of the TUI module selector or `--ai-modules` CLI flag. They are managed separately via the **Skill Manager** or manual installation.
 
 | ID | Label | Description |
 |----|-------|-------------|

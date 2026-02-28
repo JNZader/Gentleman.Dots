@@ -126,7 +126,7 @@ func stepCloneRepo(m *Model) error {
 	}
 
 	SendLog(stepID, "Cloning repository from GitHub...")
-	result := system.RunWithLogs("git clone --progress https://github.com/Gentleman-Programming/Gentleman.Dots.git "+repoDir, nil, func(line string) {
+	result := system.RunWithLogs("git clone --progress "+m.RepoURL+" "+repoDir, nil, func(line string) {
 		SendLog(stepID, line)
 	})
 	if result.Error != nil {

@@ -60,11 +60,10 @@ go build -o gentleman-dots ./cmd/gentleman-installer
 From the main menu you can access:
 
 - **Start Installation**: Begin the guided setup process
-- **Learn About Tools**: Explore terminals, shells, and multiplexers
-- **Neovim Keymaps**: Browse all configured keybindings
-- **LazyVim Guide**: Learn LazyVim fundamentals
-- **Vim Trainer**: Practice Vim motions with interactive exercises
+- **Learn & Practice**: Explore tools, keymaps, LazyVim guide, and Vim Trainer
 - **Restore from Backup**: Restore previous configurations (if backups exist)
+- **Initialize Project**: Bootstrap a project with AI framework support
+- **Skill Manager**: Browse, install, and remove AI agent skills
 - **Exit**: Quit the installer
 
 ### Installation Flow
@@ -75,12 +74,13 @@ From the main menu you can access:
 4. **Shell**: Choose Nushell, Fish, Zsh, or None
 5. **Window Manager**: Select Tmux, Zellij, or None
 6. **Neovim**: Configure LazyVim with LSP and AI assistants
-7. **AI Tools**: Multi-select Claude Code, OpenCode, Gemini CLI, GitHub Copilot
-8. **AI Framework**: Choose preset or custom module selection (203 modules across 6 categories)
-9. **Backup Confirmation**: Option to backup existing configs before overwriting
-10. **Installation**: Watch real-time progress
+7. **Zed**: Install Zed editor with Vim mode and AI agent support
+8. **AI Tools**: Multi-select Claude Code, OpenCode, Gemini CLI, GitHub Copilot, Codex CLI
+9. **AI Framework**: Choose preset or custom module selection (206 modules across 6 categories)
+10. **Backup Confirmation**: Option to backup existing configs before overwriting
+11. **Installation**: Watch real-time progress
 
-> See [AI Tools & Framework Integration](ai-tools-integration.md) for detailed documentation on steps 7-8, including the category drill-down UI, viewport scrolling, preset reference, and SDD choice.
+> See [AI Tools & Framework Integration](ai-tools-integration.md) for detailed documentation on steps 8-9, including the category drill-down UI, viewport scrolling, preset reference, and SDD choice.
 
 ### Keyboard Shortcuts
 
@@ -118,45 +118,87 @@ For CI/CD or scripted installations:
 gentleman.dots --non-interactive --shell=<shell> [options]
 ```
 
+**Repository Overrides:**
+
+| Flag | Values | Description |
+|------|--------|-------------|
+| `--repo-dir` | directory name | Override repo directory name (default: Gentleman.Dots, env: `REPO_DIR`) |
+| `--repo-url` | git URL | Override repo git URL (default: upstream Gentleman.Dots, env: `REPO_URL`) |
+
+**Environment Selection:**
+
 | Flag | Values | Description |
 |------|--------|-------------|
 | `--shell` | `fish`, `zsh`, `nushell` | Shell to install (required) |
 | `--terminal` | `alacritty`, `wezterm`, `kitty`, `ghostty`, `none` | Terminal emulator |
 | `--wm` | `tmux`, `zellij`, `none` | Window manager |
 | `--nvim` | | Install Neovim configuration |
+| `--zed` | | Install Zed editor with config |
 | `--font` | | Install Nerd Font |
 | `--backup` | `true`/`false` | Backup existing configs (default: true) |
-| `--ai-tools` | `claude,opencode,gemini,copilot` | AI tools (comma-separated) |
+
+**AI Options:**
+
+| Flag | Values | Description |
+|------|--------|-------------|
+| `--ai-tools` | `claude,opencode,gemini,copilot,codex` | AI tools (comma-separated) |
 | `--ai-framework` | | Install AI coding framework |
 | `--ai-preset` | `minimal,frontend,backend,fullstack,data,complete` | Framework preset |
 | `--ai-modules` | `hooks,commands,skills,agents,sdd,mcp` | Framework features (comma-separated) |
 | `--agent-teams-lite` | | Install Agent Teams Lite SDD framework |
 
+**Project Init Options:**
+
+| Flag | Values | Description |
+|------|--------|-------------|
+| `--init-project` | | Initialize a project with AI framework |
+| `--project-path` | directory path | Project directory (required with `--init-project`) |
+| `--project-memory` | `obsidian-brain,vibekanban,engram,simple,none` | Memory module (default: simple) |
+| `--project-ci` | `github,gitlab,woodpecker,none` | CI provider (default: none) |
+| `--project-engram` | | Add Engram alongside Obsidian Brain |
+
+**Skill Manager Options:**
+
+| Flag | Values | Description |
+|------|--------|-------------|
+| `--skill-install` | comma-separated names | Skills to install |
+| `--skill-remove` | comma-separated names | Skills to remove |
+
 ### Examples
 
 ```bash
 # Interactive TUI (default)
-gentleman.dots
+gentleman-dots
 
-# Non-interactive with Fish + Zellij + Neovim
-gentleman.dots --non-interactive --shell=fish --wm=zellij --nvim
+# Non-interactive with Fish + Zellij + Neovim + Zed
+gentleman-dots --non-interactive --shell=fish --wm=zellij --nvim --zed
 
 # Test mode with Zsh + Tmux (no terminal, no nvim)
-gentleman.dots --test --non-interactive --shell=zsh --wm=tmux
+gentleman-dots --test --non-interactive --shell=zsh --wm=tmux
 
 # Dry run to preview changes
-gentleman.dots --dry-run
+gentleman-dots --dry-run
 
 # Full setup with AI tools and framework
-gentleman.dots --non-interactive --shell=fish --nvim \
-  --ai-tools=claude,opencode --ai-preset=fullstack
+gentleman-dots --non-interactive --shell=fish --nvim \
+  --ai-tools=claude,opencode,codex --ai-preset=fullstack
 
 # Custom framework features with Agent Teams Lite
-gentleman.dots --non-interactive --shell=zsh --ai-tools=claude --ai-framework \
+gentleman-dots --non-interactive --shell=zsh --ai-tools=claude --ai-framework \
   --ai-modules=hooks,skills --agent-teams-lite
 
+# Use a fork repo
+gentleman-dots --repo-url=https://github.com/YourUser/YourFork.git --repo-dir=YourFork
+
+# Initialize a project
+gentleman-dots --non-interactive --init-project \
+  --project-path=/path/to/project --project-memory=obsidian-brain --project-ci=github
+
+# Install skills
+gentleman-dots --non-interactive --skill-install=react-19,typescript,tailwind-4
+
 # Verbose output (shows all command logs)
-GENTLEMAN_VERBOSE=1 gentleman.dots --non-interactive --shell=fish --nvim
+GENTLEMAN_VERBOSE=1 gentleman-dots --non-interactive --shell=fish --nvim
 ```
 
 ## Backup & Restore
@@ -177,6 +219,7 @@ The installer automatically detects existing configurations for:
 | WezTerm | `~/.config/wezterm`, `~/.wezterm.lua` |
 | Kitty | `~/.config/kitty` |
 | Ghostty | `~/.config/ghostty` |
+| Zed | `~/.config/zed` |
 | Starship | `~/.config/starship.toml` |
 
 ### Backup Location

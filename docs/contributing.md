@@ -1,6 +1,6 @@
-# Contributing to Gentleman.Dots
+# Contributing to Javi.Dots
 
-Guide for contributors and developers working on Gentleman.Dots.
+Guide for contributors and developers working on Javi.Dots (fork of Gentleman.Dots).
 
 ## Table of Contents
 
@@ -16,15 +16,15 @@ Guide for contributors and developers working on Gentleman.Dots.
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| Go | 1.21+ | Build the installer |
+| Go | 1.25+ | Build the installer |
 | Docker | Latest | Run E2E tests |
 | Git | Latest | Version control |
 
 ### Build from Source
 
 ```bash
-git clone https://github.com/Gentleman-Programming/Gentleman.Dots.git
-cd Gentleman.Dots/installer
+git clone https://github.com/JNZader/Javi.Dots.git
+cd Javi.Dots/installer
 go build -o gentleman-dots ./cmd/gentleman-installer
 ./gentleman-dots
 ```
@@ -39,23 +39,29 @@ go test ./... -v
 ## Project Structure
 
 ```
-Gentleman.Dots/
+Javi.Dots/
 ├── installer/                    # Go TUI installer
 │   ├── cmd/gentleman-installer/  # Entry point
 │   ├── internal/
 │   │   ├── system/               # OS detection, command execution
 │   │   └── tui/                  # Bubbletea screens, views, installer
+│   │       └── trainer/          # Vim Trainer RPG system
 │   └── e2e/                      # Docker-based E2E tests
 ├── skills/                       # Repository-specific AI skills
 │   ├── setup.sh                  # Sync script for AI assistants
 │   └── */SKILL.md                # Individual skills
+├── openspec/                     # Spec-Driven Development artifacts
 ├── GentlemanClaude/              # Claude Code config + user skills
+├── GentlemanOpenCode/            # OpenCode AI config
 ├── GentlemanNvim/                # Neovim configuration
+├── GentlemanZed/                 # Zed editor config (Vim mode + AI)
 ├── GentlemanFish/                # Fish shell config
-├── GentlemanZsh/                 # Zsh config
+├── GentlemanZsh/                 # Zsh + Oh-My-Zsh + Powerlevel10k
 ├── GentlemanNushell/             # Nushell config
 ├── GentlemanTmux/                # Tmux config
 ├── GentlemanZellij/              # Zellij config
+├── GentlemanGhostty/             # Ghostty terminal config
+├── GentlemanKitty/               # Kitty terminal config
 ├── docs/                         # Documentation
 └── AGENTS.md                     # Single source of truth for AI skills
 ```

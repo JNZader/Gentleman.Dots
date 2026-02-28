@@ -40,6 +40,7 @@ type cliFlags struct {
 	skillInstall   string // comma-separated skill names to install
 	skillRemove    string // comma-separated skill names to remove
 	repoDir        string // override repo directory name
+	repoURL        string // override repo git URL
 }
 
 func parseFlags() *cliFlags {
@@ -73,6 +74,7 @@ func parseFlags() *cliFlags {
 	flag.StringVar(&flags.skillInstall, "skill-install", "", "Skills to install (comma-separated)")
 	flag.StringVar(&flags.skillRemove, "skill-remove", "", "Skills to remove (comma-separated)")
 	flag.StringVar(&flags.repoDir, "repo-dir", "", "Override repo directory name (default: Gentleman.Dots, env: REPO_DIR)")
+	flag.StringVar(&flags.repoURL, "repo-url", "", "Override repo git URL (default: upstream Gentleman.Dots, env: REPO_URL)")
 
 	flag.Parse()
 	return flags
@@ -117,6 +119,13 @@ func main() {
 		model.RepoDir = flags.repoDir
 	} else if env := os.Getenv("REPO_DIR"); env != "" {
 		model.RepoDir = env
+	}
+
+	// Override repo URL: flag > env > default
+	if flags.repoURL != "" {
+		model.RepoURL = flags.repoURL
+	} else if env := os.Getenv("REPO_URL"); env != "" {
+		model.RepoURL = env
 	}
 
 	p := tea.NewProgram(
@@ -378,8 +387,16 @@ func runNonInteractive(flags *cliFlags) error {
 		repoDir = env
 	}
 
+	// Resolve repo URL: flag > env > default
+	repoURL := tui.DefaultRepoURL
+	if flags.repoURL != "" {
+		repoURL = flags.repoURL
+	} else if env := os.Getenv("REPO_URL"); env != "" {
+		repoURL = env
+	}
+
 	// Run the installation
-	return tui.RunNonInteractive(choices, repoDir)
+	return tui.RunNonInteractive(choices, repoDir, repoURL)
 }
 
 func setupTestMode() {
@@ -425,6 +442,7 @@ Flags:
 
 Non-Interactive Options:
   --repo-dir=<dir>     Override repo directory name (default: Gentleman.Dots, env: REPO_DIR)
+  --repo-url=<url>     Override repo git URL (default: upstream Gentleman.Dots, env: REPO_URL)
   --shell=<shell>      Shell to install (required): fish, zsh, nushell
   --terminal=<term>    Terminal: alacritty, wezterm, kitty, ghostty, none
   --wm=<wm>            Window manager: tmux, zellij, none
