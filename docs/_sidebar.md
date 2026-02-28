@@ -1,5 +1,4 @@
 - [Home](/)
-- [Español](/es)
 
 - **Getting Started**
   - [TUI Installer](tui-installer.md)
