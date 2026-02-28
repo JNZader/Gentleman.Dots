@@ -1132,7 +1132,7 @@ func stepInstallAITools(m *Model) error {
 		}
 	}
 
-	// Install OpenAI Codex CLI
+	// Install and configure OpenAI Codex CLI
 	if hasAITool(m.Choices.AITools, "codex") {
 		SendLog(stepID, "Installing Codex CLI...")
 		result := system.RunWithLogs(`npm install -g @openai/codex`, nil, func(line string) {
@@ -1143,6 +1143,25 @@ func stepInstallAITools(m *Model) error {
 		} else {
 			SendLog(stepID, "✓ Codex CLI installed")
 		}
+
+		SendLog(stepID, "Configuring Codex CLI...")
+		codexDir := filepath.Join(homeDir, ".codex")
+		agentsSkillsDir := filepath.Join(homeDir, ".agents", "skills")
+		system.EnsureDir(codexDir)
+		system.EnsureDir(agentsSkillsDir)
+
+		// Copy CLAUDE.md as AGENTS.md (Codex reads AGENTS.md for instructions)
+		system.CopyFile(filepath.Join(repoDir, "GentlemanClaude/CLAUDE.md"), filepath.Join(codexDir, "AGENTS.md"))
+
+		// Copy skills to ~/.agents/skills/ (Codex global skill discovery path)
+		skillsToCopy := []string{"ai-sdk-5", "django-drf", "nextjs-15", "playwright", "pytest", "react-19", "tailwind-4", "typescript", "zod-4", "zustand-5"}
+		for _, skill := range skillsToCopy {
+			skillSrc := filepath.Join(repoDir, "GentlemanClaude/skills", skill)
+			skillDst := filepath.Join(agentsSkillsDir, skill)
+			system.EnsureDir(skillDst)
+			system.CopyFile(filepath.Join(skillSrc, "SKILL.md"), filepath.Join(skillDst, "SKILL.md"))
+		}
+		SendLog(stepID, "⚙️ Copied AGENTS.md, skills to ~/.agents/skills/")
 	}
 
 	// Install GitHub Copilot CLI extension
@@ -1219,6 +1238,9 @@ func stepInstallAIFramework(m *Model) error {
 		if hasAITool(m.Choices.AITools, "copilot") {
 			clis = append(clis, "copilot")
 		}
+		if hasAITool(m.Choices.AITools, "codex") {
+			clis = append(clis, "codex")
+		}
 		if len(clis) > 0 {
 			setupCmd += " --clis=" + strings.Join(clis, ",")
 		}
@@ -1277,9 +1299,10 @@ func installAgentTeamsLite(m *Model) error {
 
 	// Map our AI tool IDs to agent-teams-lite agent names
 	agentMap := map[string]string{
-		"claude":  "claude-code",
+		"claude":   "claude-code",
 		"opencode": "opencode",
-		"gemini":  "gemini-cli",
+		"gemini":   "gemini-cli",
+		"codex":    "codex",
 	}
 
 	installed := 0
