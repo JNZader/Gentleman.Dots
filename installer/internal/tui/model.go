@@ -57,10 +57,10 @@ const (
 	ScreenRestoreBackup
 	ScreenRestoreConfirm
 	// AI Framework screens
-	ScreenAIToolsSelect      // Select which AI coding tools to install
-	ScreenAIFrameworkConfirm // Confirm AI framework installation
-	ScreenAIFrameworkPreset  // Select framework preset (minimal, frontend, etc.)
-	ScreenAIFrameworkCategories  // Select module category to drill into
+	ScreenAIToolsSelect            // Select which AI coding tools to install
+	ScreenAIFrameworkConfirm       // Confirm AI framework installation
+	ScreenAIFrameworkPreset        // Select framework preset (minimal, frontend, etc.)
+	ScreenAIFrameworkCategories    // Select module category to drill into
 	ScreenAIFrameworkCategoryItems // Select individual items within a category
 	// Warning screens
 	ScreenGhosttyWarning // Warning about Ghostty compatibility on Debian/Ubuntu
@@ -72,15 +72,15 @@ const (
 	ScreenTrainerResult     // Result after exercise
 	ScreenTrainerBossResult // Result after boss fight
 	// Project Init screens
-	ScreenProjectPath       // Text input: project directory
-	ScreenProjectStack      // Single-select: detected stack confirmation/override
+	ScreenProjectPath            // Text input: project directory
+	ScreenProjectStack           // Single-select: detected stack confirmation/override
 	ScreenProjectMemory          // Single-select: memory module
 	ScreenProjectObsidianInstall // Offer to install Obsidian app if not detected
 	ScreenProjectEngram          // Yes/No: add Engram alongside Obsidian Brain
-	ScreenProjectCI         // Single-select: CI provider
-	ScreenProjectConfirm    // Summary before execution
-	ScreenProjectInstalling // Progress log
-	ScreenProjectResult     // Success/error
+	ScreenProjectCI              // Single-select: CI provider
+	ScreenProjectConfirm         // Summary before execution
+	ScreenProjectInstalling      // Progress log
+	ScreenProjectResult          // Success/error
 	// Skill Manager screens
 	ScreenSkillMenu    // Browse / Install / Remove / Update
 	ScreenSkillBrowse  // Scrollable read-only list
@@ -129,19 +129,19 @@ type UserChoices struct {
 	InstallZed   bool
 	CreateBackup bool // Whether to backup existing configs
 	// AI Tools and Framework
-	AITools              []string // Selected AI tools: "claude", "opencode"
-	InstallAIFramework   bool     // Whether to install project-starter-framework
-	AIFrameworkPreset    string   // Preset: "minimal", "frontend", "backend", "fullstack", "data", "complete"
-	AIFrameworkModules   []string // Individual module names when preset is "custom"
-	InstallAgentTeamsLite bool    // Whether to install agent-teams-lite SDD framework
+	AITools               []string // Selected AI tools: "claude", "opencode"
+	InstallAIFramework    bool     // Whether to install project-starter-framework
+	AIFrameworkPreset     string   // Preset: "minimal", "frontend", "backend", "fullstack", "data", "complete"
+	AIFrameworkModules    []string // Individual module names when preset is "custom"
+	InstallAgentTeamsLite bool     // Whether to install agent-teams-lite SDD framework
 	// Project init
-	InitProject   bool
-	ProjectPath   string
-	ProjectStack  string
-	ProjectMemory string
-	ProjectCI        string
-	ProjectEngram    bool
-	InstallObsidian  bool
+	InitProject     bool
+	ProjectPath     string
+	ProjectStack    string
+	ProjectMemory   string
+	ProjectCI       string
+	ProjectEngram   bool
+	InstallObsidian bool
 }
 
 // Model is the main application state
@@ -411,7 +411,7 @@ func (m Model) GetCurrentOptions() []string {
 	case ScreenZedSelect:
 		return []string{"Yes, install Zed with config", "No, skip Zed"}
 	case ScreenAIToolsSelect:
-		return []string{"Claude Code", "OpenCode", "Gemini CLI", "GitHub Copilot", "Codex CLI", "─────────────", "✅ Confirm selection"}
+		return []string{"Claude Code", "OpenCode", "Gemini CLI", "GitHub Copilot", "Codex CLI", "Qwen Code", "─────────────", "🔘 Select All", "✅ Confirm selection"}
 	case ScreenAIFrameworkConfirm:
 		return []string{"Yes, install AI Framework", "No, skip framework"}
 	case ScreenAIFrameworkPreset:

@@ -329,8 +329,8 @@ func (m Model) renderAIToolSelection() string {
 			checkbox = "[✓] "
 		}
 
-		// "Confirm selection" doesn't get a checkbox
-		if strings.HasPrefix(opt, "✅") {
+		// "Select All" and "Confirm selection" don't get a checkbox
+		if strings.HasPrefix(opt, "✅") || strings.HasPrefix(opt, "🔘") {
 			checkbox = ""
 		}
 

@@ -1652,7 +1652,7 @@ func (m Model) proceedToBackupOrInstall() (tea.Model, tea.Cmd) {
 }
 
 // aiToolIDMap maps AI tool option index to tool ID
-var aiToolIDMap = []string{"claude", "opencode", "gemini", "copilot", "codex"}
+var aiToolIDMap = []string{"claude", "opencode", "gemini", "copilot", "codex", "qwen"}
 
 // ModuleCategory groups related module items for the category drill-down UI
 type ModuleCategory struct {
@@ -2079,6 +2079,7 @@ func (m Model) handleAIToolsKeys(key string) (tea.Model, tea.Cmd) {
 	options := m.GetCurrentOptions()
 	lastToolIdx := len(aiToolIDMap) - 1 // Last toggleable tool index
 	confirmIdx := len(options) - 1      // "Confirm selection" is last option
+	selectAllIdx := confirmIdx - 1      // "Select All" is second to last
 
 	switch key {
 	case "up", "k":
@@ -2101,6 +2102,18 @@ func (m Model) handleAIToolsKeys(key string) (tea.Model, tea.Cmd) {
 			// Toggle tool selection
 			if m.AIToolSelected != nil && m.Cursor < len(m.AIToolSelected) {
 				m.AIToolSelected[m.Cursor] = !m.AIToolSelected[m.Cursor]
+			}
+		} else if m.Cursor == selectAllIdx {
+			// Select All — toggle all tools on/off
+			allSelected := true
+			for i := 0; i < len(aiToolIDMap); i++ {
+				if !m.AIToolSelected[i] {
+					allSelected = false
+					break
+				}
+			}
+			for i := 0; i < len(aiToolIDMap); i++ {
+				m.AIToolSelected[i] = !allSelected
 			}
 		} else if m.Cursor == confirmIdx {
 			// Confirm — collect selected tools
