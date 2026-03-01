@@ -28,7 +28,7 @@ A complete development environment configuration including:
 
 - **Neovim** with LSP, autocompletion, and AI assistants
 - **AI Tools**: Claude Code, OpenCode, Gemini CLI, GitHub Copilot, Codex CLI, Qwen Code
-- **AI Framework**: 198 modules (agents, skills, hooks, commands, SDD, MCP)
+- **AI Framework**: 198 modules (agents, skills, hooks, commands, SDD, MCP) + 6 domain orchestrators
 - **Shells**: Fish, Zsh, Nushell
 - **Terminal Multiplexers**: Tmux, Zellij
 - **Terminal Emulators**: Alacritty, WezTerm, Kitty, Ghostty

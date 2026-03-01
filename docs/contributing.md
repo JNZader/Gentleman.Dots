@@ -53,6 +53,7 @@ Javi.Dots/
 ├── openspec/                     # Spec-Driven Development artifacts
 ├── GentlemanClaude/              # Claude Code config + user skills
 ├── GentlemanOpenCode/            # OpenCode AI config
+├── GentlemanQwen/                # Qwen Code config
 ├── GentlemanNvim/                # Neovim configuration
 ├── GentlemanZed/                 # Zed editor config (Vim mode + AI)
 ├── GentlemanFish/                # Fish shell config

@@ -224,7 +224,7 @@ The config includes 40+ custom "thinking" messages:
 
 ## OpenCode Configuration
 
-OpenCode is installed automatically with a custom **Gentleman** agent and theme.
+OpenCode is installed automatically with a custom **Gentleman** agent, **6 domain orchestrators**, and theme.
 
 > ✅ **Claude Max/Pro Support**: OpenCode supports Claude subscriptions via the `opencode-anthropic-auth` plugin, already configured in `GentlemanOpenCode/opencode.json`. Just run `opencode` and authenticate with your Claude account.
 
@@ -239,6 +239,22 @@ OpenCode is installed automatically with a custom **Gentleman** agent and theme.
 2. Type `/agent` and press Enter
 
 3. Select **gentleman** from the list
+
+### Available Agents (Tab Picker)
+
+The OpenCode Tab picker shows 9 agents instead of 72+, thanks to domain orchestrators:
+
+| Agent | Purpose |
+|-------|---------|
+| `gentleman` | Day-to-day coding with Gentleman personality |
+| `sdd-orchestrator` | Spec-Driven Development with 9 SDD phases |
+| `development-orchestrator` | Routes to 22 development agents (React, Go, Java, etc.) |
+| `quality-orchestrator` | Routes to 11 quality/testing agents |
+| `infrastructure-orchestrator` | Routes to 7 cloud/DevOps agents |
+| `data-ai-orchestrator` | Routes to 6 data & AI agents |
+| `business-orchestrator` | Routes to 8 business/strategy agents |
+| `workflow-orchestrator` | Routes to 16 workflow/specialized agents |
+| `orchestrator` | General-purpose multi-domain orchestrator |
 
 ### Using the SDD Orchestrator Agent
 
@@ -284,10 +300,20 @@ Example configuration:
   "agent": {
     "gentleman": {
       "model": "anthropic/claude-sonnet-4-20250514"
-    }
+    },
+    "development-orchestrator": {
+      "model": "anthropic/claude-sonnet-4-20250514"
+    },
+    "quality-orchestrator": { "..." : "..." },
+    "infrastructure-orchestrator": { "..." : "..." },
+    "data-ai-orchestrator": { "..." : "..." },
+    "business-orchestrator": { "..." : "..." },
+    "workflow-orchestrator": { "..." : "..." }
   }
 }
 ```
+
+> **Note:** The full `opencode.json` includes system prompts for each orchestrator agent. See `GentlemanOpenCode/opencode.json` for the complete configuration.
 
 ### Available Models
 

@@ -7,6 +7,7 @@ Complete reference of all 198 modules across 6 categories available in the [proj
 - [Overview](#overview)
 - [How Features Work](#how-features-work)
 - [Categories Summary](#categories-summary)
+- [Domain Orchestrators (6 items)](#-domain-orchestrators-6-items)
 - [Hooks (10 items)](#-hooks-10-items)
 - [Commands (20 items)](#-commands-20-items)
 - [Agents (72 items)](#-agents-72-items)
@@ -18,7 +19,7 @@ Complete reference of all 198 modules across 6 categories available in the [proj
 
 ## Overview
 
-The installer presents 198 individual modules organized into 6 categories. In the TUI, you can browse and toggle individual items within each category. However, `setup-global.sh` operates at the **feature level** — selecting ANY item within a category enables that entire feature.
+The installer presents 198 individual modules organized into 6 categories, plus **6 domain orchestrators** that provide intelligent agent routing for OpenCode. In the TUI, you can browse and toggle individual items within each category. However, `setup-global.sh` operates at the **feature level** — selecting ANY item within a category enables that entire feature.
 
 ## How Features Work
 
@@ -53,6 +54,31 @@ The individual item selection in the TUI is **informational** — it helps you s
 | MCP Servers | 🔌 | 9 | `mcp` | Yes |
 
 **Total: 198 modules**
+
+---
+
+## 🧭 Domain Orchestrators (6 items)
+
+Domain orchestrators sit between the user and the 72 individual agents, providing intelligent routing by domain. Instead of scrolling through a flat list of 72+ agents in OpenCode's Tab picker, you select from 6 domain orchestrators (plus Gentleman, SDD, and general orchestrator = 9 total agents visible).
+
+Each orchestrator knows every agent in its domain and delegates to the right specialist based on your task description. They work across **all 4 CLIs** that support sub-agents: Claude Code, OpenCode, Qwen Code, and Gemini CLI.
+
+| Orchestrator | Domain | Agents Routed | Key Specialists |
+|-------------|--------|:------------:|-----------------|
+| `development-orchestrator` | Development + Creative | 22 | React Pro, TypeScript Pro, Backend Architect, Fullstack Engineer |
+| `quality-orchestrator` | Quality + Testing | 11 | Code Reviewer, Security Auditor, E2E Specialist, Performance Tester |
+| `infrastructure-orchestrator` | Cloud + DevOps | 7 | Cloud Architect, Kubernetes Expert, DevOps Engineer, Incident Responder |
+| `data-ai-orchestrator` | Data & AI | 6 | AI Engineer, Data Scientist, MLOps Engineer, Prompt Engineer |
+| `business-orchestrator` | Business + Strategy | 8 | Project Manager, API Designer, Product Strategist, Technical Writer |
+| `workflow-orchestrator` | Workflow + Specialized | 16 | Plan Executor, Wave Executor, Code Migrator, Error Detective |
+
+**How they work:**
+1. User selects a domain orchestrator (e.g., `development-orchestrator`)
+2. Describes their task: "Optimize React component rendering"
+3. Orchestrator identifies the best specialist (`development-react-pro`)
+4. Delegates the task with full context
+
+**Installation:** Domain orchestrators are auto-installed when OpenCode is selected as an AI tool. They appear in the OpenCode Tab picker alongside `gentleman` and `sdd-orchestrator`.
 
 ---
 

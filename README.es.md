@@ -49,7 +49,7 @@ Una configuración completa de entorno de desarrollo que incluye:
 * **Neovim** con LSP, autocompletado y asistentes de IA (Claude Code, Gemini, OpenCode)
 * **Zed** editor con modo Vim y soporte para agentes IA
 * **Herramientas IA**: Claude Code, OpenCode, Gemini CLI, GitHub Copilot, Codex CLI, Qwen Code con configs, skills y temas
-* **Framework IA**: 198 módulos (72 agentes, 85 skills, 10 hooks, 20 comandos, 9 servidores MCP) con selección por preset o personalizada
+* **Framework IA**: 198 módulos (72 agentes, 85 skills, 10 hooks, 20 comandos, 9 servidores MCP) + 6 orquestadores de dominio + 28 skills curados, con selección por preset o personalizada
 * **Shells**: Fish, Zsh, Nushell
 * **Multiplexores de terminal**: Tmux, Zellij
 * **Emuladores de terminal**: Alacritty, WezTerm, Kitty, Ghostty
@@ -141,15 +141,31 @@ El instalador incluye un sistema completo de integración con IA (Pasos 8-9):
 
 ### Herramientas IA (Paso 8)
 
-Selección múltiple de 5 herramientas de IA:
+Selección múltiple de 6 herramientas de IA (con botón Seleccionar Todo):
 
 | Herramienta | Qué se instala |
 |-------------|---------------|
 | **Claude Code** | Binario + CLAUDE.md + persona Gentleman + 10+ skills + tema Kanagawa |
-| **OpenCode** | Binario + agente Gentleman + orquestador SDD + tema |
+| **OpenCode** | Binario + agente Gentleman + 6 orquestadores de dominio + orquestador SDD + tema |
 | **Gemini CLI** | CLI vía npm |
 | **GitHub Copilot** | Extensión gh |
 | **Codex CLI** | Binario vía npm + config AGENTS.md |
+| **Qwen Code** | Binario vía npm + QWEN.md + settings.json |
+
+### Orquestadores de Dominio
+
+OpenCode incluye **6 orquestadores de dominio** que reemplazan el selector plano de 72 agentes por una experiencia manejable de 9 agentes:
+
+| Orquestador | Agentes | Ejemplos |
+|------------|:-------:|---------|
+| `development-orchestrator` | 22 | React Pro, Go Pro, Backend Architect |
+| `quality-orchestrator` | 11 | Code Reviewer, Security Auditor, E2E Specialist |
+| `infrastructure-orchestrator` | 7 | Cloud Architect, Kubernetes Expert, DevOps |
+| `data-ai-orchestrator` | 6 | AI Engineer, Data Scientist, MLOps |
+| `business-orchestrator` | 8 | Project Manager, API Designer, Product Strategist |
+| `workflow-orchestrator` | 16 | Plan Executor, Wave Executor, Code Migrator |
+
+Elegí un orquestador de dominio → este rutea al especialista correcto. No más scrollear entre 72+ agentes.
 
 ### Framework IA (Paso 9)
 
@@ -159,7 +175,7 @@ Elegí un preset o personalizá entre **198 módulos** en 6 categorías:
 |-----------|--------:|---------|
 | 🪝 Hooks | 10 | Secret Scanner, Commit Guard, Model Router |
 | ⚡ Comandos | 20 | Git Commit, PR Review, TDD, Refactoring |
-| 🤖 Agentes | 80 | React Pro, DevOps Engineer, Security Auditor |
+| 🤖 Agentes | 72 | React Pro, DevOps Engineer, Security Auditor |
 | 🎯 Skills | 85 | FastAPI, Spring Boot 4, Kubernetes, PyTorch |
 | 📐 SDD | 2 | OpenSpec, Agent Teams Lite |
 | 🔌 MCP | 9 | Context7, Engram, Jira, Atlassian, Figma, Notion, Brave Search, Sentry, Cloudflare |
@@ -168,7 +184,7 @@ Elegí un preset o personalizá entre **198 módulos** en 6 categorías:
 
 **Elección SDD**: Instalá [OpenSpec](https://github.com/JNZader/project-starter-framework) (SDD basado en archivos), [Agent Teams Lite](https://github.com/Gentleman-Programming/agent-teams-lite) (SDD liviano con 9 sub-agentes), o ambos.
 
-**Scroll con viewport**: Las listas largas (Skills: 85, Agents: 80) scrollean dentro de la terminal con indicadores `▲`/`▼`.
+**Scroll con viewport**: Las listas largas (Skills: 85, Agents: 72) scrollean dentro de la terminal con indicadores `▲`/`▼`.
 
 ---
 
@@ -316,6 +332,7 @@ Javi.Dots/
 ├── GentlemanNvim/           # Configuración Neovim
 ├── GentlemanClaude/         # Config Claude Code + skills
 ├── GentlemanOpenCode/       # Config OpenCode
+├── GentlemanQwen/           # Config Qwen Code
 ├── GentlemanZed/            # Config Zed (modo Vim + IA)
 │
 ├── GentlemanFish/

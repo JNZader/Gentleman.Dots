@@ -46,7 +46,7 @@ A complete development environment configuration including:
 - **Neovim** with LSP, autocompletion, and AI assistants (Claude Code, Gemini, OpenCode)
 - **Zed** editor with Vim mode and AI agent support
 - **AI Tools**: Claude Code, OpenCode, Gemini CLI, GitHub Copilot, Codex CLI, Qwen Code with configs, skills, and themes
-- **AI Framework**: 198 modules (72 agents, 85 skills, 10 hooks, 20 commands, 9 MCP servers) + 28 curated skills, with preset or custom selection
+- **AI Framework**: 198 modules (72 agents, 85 skills, 10 hooks, 20 commands, 9 MCP servers) + 6 domain orchestrators + 28 curated skills, with preset or custom selection
 - **Shells**: Fish, Zsh, Nushell
 - **Terminal Multiplexers**: Tmux, Zellij
 - **Terminal Emulators**: Alacritty, WezTerm, Kitty, Ghostty
@@ -136,15 +136,31 @@ The installer includes a complete AI integration system (Steps 8-9):
 
 ### AI Tools (Step 8)
 
-Multi-select from 5 AI coding tools:
+Multi-select from 6 AI coding tools (with Select All toggle):
 
 | Tool | What Gets Installed |
 |------|-------------------|
 | **Claude Code** | Binary + CLAUDE.md + Gentleman persona + 10+ skills + Kanagawa theme |
-| **OpenCode** | Binary + Gentleman agent + SDD orchestrator + theme |
+| **OpenCode** | Binary + Gentleman agent + 6 domain orchestrators + SDD orchestrator + theme |
 | **Gemini CLI** | CLI via npm |
 | **GitHub Copilot** | gh extension |
 | **Codex CLI** | Binary via npm + AGENTS.md config |
+| **Qwen Code** | Binary via npm + QWEN.md + settings.json |
+
+### Domain Orchestrators
+
+OpenCode includes **6 domain orchestrators** that replace the flat 72-agent Tab picker with a manageable 9-agent experience:
+
+| Orchestrator | Agents Routed | Examples |
+|-------------|:------------:|---------|
+| `development-orchestrator` | 22 | React Pro, Go Pro, Backend Architect |
+| `quality-orchestrator` | 11 | Code Reviewer, Security Auditor, E2E Specialist |
+| `infrastructure-orchestrator` | 7 | Cloud Architect, Kubernetes Expert, DevOps |
+| `data-ai-orchestrator` | 6 | AI Engineer, Data Scientist, MLOps |
+| `business-orchestrator` | 8 | Project Manager, API Designer, Product Strategist |
+| `workflow-orchestrator` | 16 | Plan Executor, Wave Executor, Code Migrator |
+
+Pick a domain orchestrator → it routes to the right specialist. No more scrolling through 72+ agents.
 
 ### AI Framework (Step 9)
 
@@ -312,6 +328,7 @@ Javi.Dots/
 ├── GentlemanClaude/         # Claude Code config + user skills
 │   └── skills/              # Installable skills (React, Next.js, etc.)
 ├── GentlemanOpenCode/       # OpenCode AI config
+├── GentlemanQwen/           # Qwen Code config
 ├── GentlemanZed/            # Zed editor config (Vim mode + AI)
 │
 ├── GentlemanFish/           # Fish shell config

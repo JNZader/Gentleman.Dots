@@ -40,7 +40,7 @@ These steps appear after Zed editor (Step 7) and before the backup confirmation 
 
 **Screen:** `ScreenAIToolsSelect`
 
-Multi-select checkboxes for 5 AI coding tools:
+Multi-select checkboxes for 6 AI coding tools (with Select All toggle):
 
 | Tool | ID | Install Method |
 |------|-----|----------------|
@@ -71,9 +71,11 @@ Multi-select checkboxes for 5 AI coding tools:
 
 **What gets installed for OpenCode:**
 - Binary via official installer
-- `opencode.json` with Gentleman agent and SDD orchestrator
+- `opencode.json` with Gentleman agent, SDD orchestrator, and **6 domain orchestrators**
 - Gentleman theme
 - Skills directory
+
+> **Domain Orchestrators in OpenCode:** Instead of 72+ agents in the Tab picker, OpenCode shows 9 agents: `gentleman`, `sdd-orchestrator`, and 6 domain orchestrators (`development-orchestrator`, `quality-orchestrator`, `infrastructure-orchestrator`, `data-ai-orchestrator`, `business-orchestrator`, `workflow-orchestrator`). Each domain orchestrator routes to the right specialist based on your task.
 
 **What gets installed for Codex CLI:**
 - Binary via npm (`@openai/codex`)
@@ -340,10 +342,11 @@ Installs each selected tool independently:
 | Tool | Process |
 |------|---------|
 | **Claude Code** | Install binary, copy CLAUDE.md, settings.json, statusline.sh, output-styles, 10+ skills, mcp-servers template, tweakcc theme, apply theme |
-| **OpenCode** | Install binary, copy opencode.json, gentleman theme, skills |
+| **OpenCode** | Install binary, copy opencode.json (includes 6 domain orchestrators), gentleman theme, skills |
 | **Gemini CLI** | `npm install -g @google/gemini-cli` |
 | **Codex CLI** | `npm install -g @openai/codex`, copy AGENTS.md to `~/.codex/` |
 | **GitHub Copilot** | `gh extension install github/gh-copilot` |
+| **Qwen Code** | `npm install -g @qwen-code/qwen-code`, copy QWEN.md + settings.json to `~/.qwen/` |
 
 Individual tool install failures are logged as **warnings**, not errors. The installation continues.
 
