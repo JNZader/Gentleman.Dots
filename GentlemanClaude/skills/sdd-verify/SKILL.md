@@ -161,6 +161,37 @@ Return to the orchestrator the same content you wrote to `verify-report.md`:
 {One-line summary of overall status}
 ```
 
+## Semantic Revert Verification
+
+Verify that all commits for the change are properly tagged for semantic revert:
+
+```
+CHECK SEMANTIC REVERT READINESS:
+├── Read openspec/changes/{change-name}/commits.log
+│   └── Flag: CRITICAL if file missing — revert traceability broken
+├── Run git log --grep="sdd:{change-name}" --oneline
+├── Compare commits.log entries against actual git history
+│   ├── Every commit in the log must exist in git
+│   └── Every commit with the [sdd:{change-name}] tag must appear in the log
+├── Check that ALL implementation commits have the [sdd:{change-name}/{task-id}] tag
+│   └── Flag: WARNING for each untagged commit — these commits cannot be reverted semantically
+└── Report revert readiness in verify-report.md
+```
+
+Add a **Semantic Revert** row to the verification report:
+
+```markdown
+### Semantic Revert
+| Metric | Value |
+|--------|-------|
+| Commits logged | {N} |
+| Commits tagged in git | {N} |
+| Untagged commits | {N} |
+| Revert ready | ✅ Yes / ❌ No |
+```
+
+If untagged commits are found, list them under **Issues Found** as WARNINGs with their short SHA and message.
+
 ## Rules
 
 - ALWAYS read the actual source code — don't trust summaries

@@ -107,6 +107,41 @@ If none, say "None."}
 {N}/{total} tasks complete. {Ready for next batch / Ready for verify / Blocked by X}
 ```
 
+## Semantic Revert Support
+
+Every commit made during the apply phase MUST be tagged with the change name and task ID in the commit message. This enables **semantic revert** — the ability to undo all commits for a specific change, phase, or task as a logical unit.
+
+### Commit Message Format
+
+```
+type(scope): description [sdd:{change-name}/{task-id}]
+```
+
+Examples:
+```
+feat(auth): implement JWT validation [sdd:add-auth/1.1]
+feat(auth): add token refresh endpoint [sdd:add-auth/1.2]
+test(auth): add middleware unit tests [sdd:add-auth/2.1]
+```
+
+### Commits Log
+
+Maintain a `commits.log` file in `openspec/changes/{change-name}/` tracking every commit made during the apply phase:
+
+```
+openspec/changes/{change-name}/
+├── ...existing artifacts...
+└── commits.log          ← You maintain this
+```
+
+Format — one line per commit, appended after each commit:
+
+```
+{short-sha} {task-id} {commit-message}
+```
+
+This log allows the verify and archive phases to confirm traceability, and allows tooling (like Conductor) to revert an entire change, a phase, or a single task by collecting commits from the log or from `git log --grep="sdd:{change-name}"`.
+
 ## Rules
 
 - ALWAYS read specs before implementing — specs are your acceptance criteria
