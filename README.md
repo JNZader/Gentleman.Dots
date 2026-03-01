@@ -46,7 +46,7 @@ A complete development environment configuration including:
 - **Neovim** with LSP, autocompletion, and AI assistants (Claude Code, Gemini, OpenCode)
 - **Zed** editor with Vim mode and AI agent support
 - **AI Tools**: Claude Code, OpenCode, Gemini CLI, GitHub Copilot, Codex CLI with configs, skills, and themes
-- **AI Framework**: 206 modules (80 agents, 85 skills, 10 hooks, 20 commands, 9 MCP servers) with preset or custom selection
+- **AI Framework**: 198 modules (72 agents, 85 skills, 10 hooks, 20 commands, 9 MCP servers) with preset or custom selection
 - **Shells**: Fish, Zsh, Nushell
 - **Terminal Multiplexers**: Tmux, Zellij
 - **Terminal Emulators**: Alacritty, WezTerm, Kitty, Ghostty
@@ -148,7 +148,7 @@ Multi-select from 5 AI coding tools:
 
 ### AI Framework (Step 9)
 
-Choose a preset or customize from **206 modules** across 6 categories:
+Choose a preset or customize from **198 modules** across 6 categories:
 
 | Category | Modules | Examples |
 |----------|--------:|---------|
@@ -244,7 +244,7 @@ gentleman-dots --repo-url=https://github.com/YourUser/YourFork.git --repo-dir=Yo
 |----------|-------------|
 | [TUI Installer Guide](docs/tui-installer.md) | Interactive installer features, navigation, backup/restore |
 | [AI Tools & Framework](docs/ai-tools-integration.md) | AI tools selection, framework presets, category drill-down, CLI flags |
-| [AI Framework Modules](docs/ai-framework-modules.md) | Complete reference of all 206 modules across 6 categories |
+| [AI Framework Modules](docs/ai-framework-modules.md) | Complete reference of all 198 modules across 6 categories |
 | [Agent Teams Lite](docs/agent-teams-lite.md) | Lightweight SDD framework with 9 sub-agents |
 | [AI Configuration](docs/ai-configuration.md) | Claude Code, OpenCode, Copilot, and other AI assistants |
 | [Manual Installation](docs/manual-installation.md) | Step-by-step manual setup for all platforms |

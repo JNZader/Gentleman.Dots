@@ -77,10 +77,10 @@ These are automatically installed by the TUI installer (Step 8: AI Tools Selecti
 | Codex CLI | `npm install -g @openai/codex` | ✅ Binary + AGENTS.md config |
 | GitHub Copilot CLI | `gh extension install github/gh-copilot` | ✅ Extension install |
 
-The installer also optionally configures the **AI Framework** (Step 9) with 206 modules across 6 categories: hooks, commands, agents, skills, SDD, and MCP servers.
+The installer also optionally configures the **AI Framework** (Step 9) with 198 modules across 6 categories: hooks, commands, agents, skills, SDD, and MCP servers.
 
 > See [AI Tools & Framework Integration](ai-tools-integration.md) for the full installation guide.
-> See [AI Framework Module Registry](ai-framework-modules.md) for the complete list of 206 modules.
+> See [AI Framework Module Registry](ai-framework-modules.md) for the complete list of 198 modules.
 > See [Agent Teams Lite](agent-teams-lite.md) for the SDD orchestration framework.
 
 > Some services require API keys. Check each plugin's documentation for details.
