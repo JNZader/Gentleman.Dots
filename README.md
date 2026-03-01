@@ -46,7 +46,7 @@ A complete development environment configuration including:
 - **Neovim** with LSP, autocompletion, and AI assistants (Claude Code, Gemini, OpenCode)
 - **Zed** editor with Vim mode and AI agent support
 - **AI Tools**: Claude Code, OpenCode, Gemini CLI, GitHub Copilot, Codex CLI with configs, skills, and themes
-- **AI Framework**: 198 modules (72 agents, 85 skills, 10 hooks, 20 commands, 9 MCP servers) with preset or custom selection
+- **AI Framework**: 198 modules (72 agents, 85 skills, 10 hooks, 20 commands, 9 MCP servers) + 28 curated skills, with preset or custom selection
 - **Shells**: Fish, Zsh, Nushell
 - **Terminal Multiplexers**: Tmux, Zellij
 - **Terminal Emulators**: Alacritty, WezTerm, Kitty, Ghostty
@@ -154,7 +154,7 @@ Choose a preset or customize from **198 modules** across 6 categories:
 |----------|--------:|---------|
 | 🪝 Hooks | 10 | Secret Scanner, Commit Guard, Model Router |
 | ⚡ Commands | 20 | Git Commit, PR Review, TDD, Refactoring |
-| 🤖 Agents | 80 | React Pro, DevOps Engineer, Security Auditor |
+| 🤖 Agents | 72 | React Pro, DevOps Engineer, Security Auditor |
 | 🎯 Skills | 85 | FastAPI, Spring Boot 4, Kubernetes, PyTorch |
 | 📐 SDD | 2 | OpenSpec, Agent Teams Lite |
 | 🔌 MCP | 9 | Context7, Engram, Jira, Atlassian, Figma, Notion, Brave Search, Sentry, Cloudflare |
@@ -163,7 +163,7 @@ Choose a preset or customize from **198 modules** across 6 categories:
 
 **SDD Choice**: Install [OpenSpec](https://github.com/JNZader/project-starter-framework) (file-based SDD), [Agent Teams Lite](https://github.com/Gentleman-Programming/agent-teams-lite) (lightweight SDD with 9 sub-agents), or both.
 
-**Viewport Scrolling**: Long lists (Skills: 85, Agents: 80) scroll within the terminal with `▲`/`▼` indicators.
+**Viewport Scrolling**: Long lists (Skills: 85, Agents: 72) scroll within the terminal with `▲`/`▼` indicators.
 
 ---
 
@@ -244,7 +244,7 @@ gentleman-dots --repo-url=https://github.com/YourUser/YourFork.git --repo-dir=Yo
 |----------|-------------|
 | [TUI Installer Guide](docs/tui-installer.md) | Interactive installer features, navigation, backup/restore |
 | [AI Tools & Framework](docs/ai-tools-integration.md) | AI tools selection, framework presets, category drill-down, CLI flags |
-| [AI Framework Modules](docs/ai-framework-modules.md) | Complete reference of all 198 modules across 6 categories |
+| [AI Framework Modules](docs/ai-framework-modules.md) | Complete reference of all 198 modules across 6 categories + 28 curated skills |
 | [Agent Teams Lite](docs/agent-teams-lite.md) | Lightweight SDD framework with 9 sub-agents |
 | [AI Configuration](docs/ai-configuration.md) | Claude Code, OpenCode, Copilot, and other AI assistants |
 | [Manual Installation](docs/manual-installation.md) | Step-by-step manual setup for all platforms |

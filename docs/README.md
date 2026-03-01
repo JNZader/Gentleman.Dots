@@ -50,7 +50,7 @@ Use the **sidebar** to navigate all docs, or jump directly:
 |---------|-------------|
 | [TUI Installer](tui-installer.md) | Interactive installer features, navigation, backup/restore |
 | [AI Tools & Framework](ai-tools-integration.md) | AI tools selection, framework presets, category drill-down |
-| [AI Framework Modules](ai-framework-modules.md) | Complete reference of all 198 modules |
+| [AI Framework Modules](ai-framework-modules.md) | Complete reference of all 198 modules + 28 curated skills |
 | [Agent Teams Lite](agent-teams-lite.md) | Lightweight SDD framework with 9 sub-agents |
 | [AI Configuration](ai-configuration.md) | Claude Code, OpenCode, Copilot setup |
 | [Manual Installation](manual-installation.md) | Step-by-step setup for all platforms |
