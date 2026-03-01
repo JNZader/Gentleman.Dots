@@ -27,11 +27,11 @@ type cliFlags struct {
 	zed            bool
 	font           bool
 	backup         bool
-	aiTools          string
-	aiFramework      bool
-	aiPreset         string
-	aiModules        string
-	agentTeamsLite   bool
+	aiTools        string
+	aiFramework    bool
+	aiPreset       string
+	aiModules      string
+	agentTeamsLite bool
 	initProject    bool
 	projectPath    string
 	projectMemory  string
@@ -61,7 +61,7 @@ func parseFlags() *cliFlags {
 	flag.BoolVar(&flags.zed, "zed", false, "Install Zed editor with config")
 	flag.BoolVar(&flags.font, "font", false, "Install Nerd Font")
 	flag.BoolVar(&flags.backup, "backup", true, "Backup existing configs (default: true)")
-	flag.StringVar(&flags.aiTools, "ai-tools", "", "AI tools: claude,opencode,gemini,copilot,codex (comma-separated)")
+	flag.StringVar(&flags.aiTools, "ai-tools", "", "AI tools: claude,opencode,gemini,copilot,codex,qwen (comma-separated)")
 	flag.BoolVar(&flags.aiFramework, "ai-framework", false, "Install AI coding framework")
 	flag.StringVar(&flags.aiPreset, "ai-preset", "", "Framework preset: minimal, frontend, backend, fullstack, data, complete")
 	flag.StringVar(&flags.aiModules, "ai-modules", "", "Framework features: hooks,commands,skills,agents,sdd,mcp (comma-separated)")
@@ -300,11 +300,11 @@ func runNonInteractive(flags *cliFlags) error {
 	// Parse AI tools
 	var aiTools []string
 	if flags.aiTools != "" {
-		validAITools := map[string]bool{"claude": true, "opencode": true, "gemini": true, "copilot": true, "codex": true}
+		validAITools := map[string]bool{"claude": true, "opencode": true, "gemini": true, "copilot": true, "codex": true, "qwen": true}
 		for _, tool := range strings.Split(flags.aiTools, ",") {
 			tool = strings.TrimSpace(strings.ToLower(tool))
 			if !validAITools[tool] {
-				return fmt.Errorf("invalid AI tool: %s (valid: claude, opencode, gemini, copilot, codex)", tool)
+				return fmt.Errorf("invalid AI tool: %s (valid: claude, opencode, gemini, copilot, codex, qwen)", tool)
 			}
 			aiTools = append(aiTools, tool)
 		}
@@ -452,7 +452,7 @@ Non-Interactive Options:
   --backup=false       Disable config backup (default: true)
 
 AI Options:
-  --ai-tools=<tools>   AI tools (comma-separated): claude, opencode, gemini, copilot, codex
+  --ai-tools=<tools>   AI tools (comma-separated): claude, opencode, gemini, copilot, codex, qwen
   --ai-framework       Install AI coding framework
   --ai-preset=<name>   Framework preset: minimal, frontend, backend, fullstack, data, complete
   --ai-modules=<feats> Framework features (comma-separated): hooks, commands, skills, agents, sdd, mcp

@@ -14,9 +14,9 @@ func TestAIToolsSelectOptions(t *testing.T) {
 	m.Screen = ScreenAIToolsSelect
 	opts := m.GetCurrentOptions()
 
-	// 5 tools + separator + confirm = 7
-	if len(opts) != 7 {
-		t.Fatalf("Expected 7 AI tools options (5 tools + separator + confirm), got %d: %v", len(opts), opts)
+	// 6 tools + separator + select all + confirm = 9
+	if len(opts) != 9 {
+		t.Fatalf("Expected 9 AI tools options (6 tools + separator + select all + confirm), got %d: %v", len(opts), opts)
 	}
 	if opts[0] != "Claude Code" {
 		t.Errorf("Expected first option 'Claude Code', got %s", opts[0])
@@ -33,11 +33,17 @@ func TestAIToolsSelectOptions(t *testing.T) {
 	if opts[4] != "Codex CLI" {
 		t.Errorf("Expected fifth option 'Codex CLI', got %s", opts[4])
 	}
-	if !strings.HasPrefix(opts[5], "───") {
-		t.Errorf("Expected separator at index 5, got %s", opts[5])
+	if opts[5] != "Qwen Code" {
+		t.Errorf("Expected sixth option 'Qwen Code', got %s", opts[5])
 	}
-	if !strings.Contains(opts[6], "Confirm") {
-		t.Errorf("Expected last option to be Confirm, got %s", opts[6])
+	if !strings.HasPrefix(opts[6], "───") {
+		t.Errorf("Expected separator at index 6, got %s", opts[6])
+	}
+	if !strings.Contains(opts[7], "Select All") {
+		t.Errorf("Expected Select All at index 7, got %s", opts[7])
+	}
+	if !strings.Contains(opts[8], "Confirm") {
+		t.Errorf("Expected last option to be Confirm, got %s", opts[8])
 	}
 }
 
@@ -136,7 +142,7 @@ func TestModuleCategoriesItemCounts(t *testing.T) {
 	expected := map[string]int{
 		"hooks":    10,
 		"commands": 20,
-		"agents":   80,
+		"agents":   72,
 		"skills":   85,
 		"sdd":      2,
 		"mcp":      9,
@@ -410,10 +416,10 @@ func TestCollectSelectedFeaturesMixed(t *testing.T) {
 	for _, cat := range moduleCategories {
 		sel[cat.ID] = make([]bool, len(cat.Items))
 	}
-	sel["hooks"][0] = true   // hooks feature
-	sel["agents"][5] = true  // agents feature
-	sel["sdd"][0] = true     // sdd feature
-	sel["mcp"][2] = true     // mcp feature
+	sel["hooks"][0] = true  // hooks feature
+	sel["agents"][5] = true // agents feature
+	sel["sdd"][0] = true    // sdd feature
+	sel["mcp"][2] = true    // mcp feature
 
 	result := collectSelectedFeatures(sel)
 
@@ -703,8 +709,8 @@ func TestAIToolsSelectAllTools(t *testing.T) {
 	result, _ := m.handleAIToolsKeys("enter")
 	newModel := result.(Model)
 
-	if len(newModel.Choices.AITools) != 5 {
-		t.Fatalf("Expected 5 AI tools, got %d: %v", len(newModel.Choices.AITools), newModel.Choices.AITools)
+	if len(newModel.Choices.AITools) != 6 {
+		t.Fatalf("Expected 6 AI tools, got %d: %v", len(newModel.Choices.AITools), newModel.Choices.AITools)
 	}
 	if newModel.Screen != ScreenAIFrameworkConfirm {
 		t.Errorf("Expected ScreenAIFrameworkConfirm, got %v", newModel.Screen)
@@ -989,8 +995,8 @@ func TestSetupInstallStepsWithoutAIFramework(t *testing.T) {
 // --- ID Map Tests ---
 
 func TestAIToolIDMapLength(t *testing.T) {
-	if len(aiToolIDMap) != 5 {
-		t.Errorf("Expected 5 tool IDs in aiToolIDMap, got %d", len(aiToolIDMap))
+	if len(aiToolIDMap) != 6 {
+		t.Errorf("Expected 6 tool IDs in aiToolIDMap, got %d", len(aiToolIDMap))
 	}
 }
 
@@ -1108,16 +1114,15 @@ func TestAIToolsSeparatorSkipDown(t *testing.T) {
 	m := NewModel()
 	m.Screen = ScreenAIToolsSelect
 	m.AIToolSelected = make([]bool, len(aiToolIDMap))
-	m.Cursor = len(aiToolIDMap) - 1 // Last tool (GitHub Copilot, index 3)
+	m.Cursor = len(aiToolIDMap) - 1 // Last tool (Qwen Code, index 5)
 
-	// Navigate down — should skip separator (index 4) and land on Confirm (index 5)
+	// Navigate down — should skip separator (index 6) and land on Select All (index 7)
 	result, _ := m.handleAIToolsKeys("down")
 	newModel := result.(Model)
 
-	opts := newModel.GetCurrentOptions()
-	confirmIdx := len(opts) - 1
-	if newModel.Cursor != confirmIdx {
-		t.Errorf("Expected cursor to skip separator and land on Confirm (index %d), got %d", confirmIdx, newModel.Cursor)
+	selectAllIdx := len(newModel.GetCurrentOptions()) - 2 // "Select All" is second to last
+	if newModel.Cursor != selectAllIdx {
+		t.Errorf("Expected cursor to skip separator and land on Select All (index %d), got %d", selectAllIdx, newModel.Cursor)
 	}
 }
 
@@ -1127,9 +1132,10 @@ func TestAIToolsSeparatorSkipUp(t *testing.T) {
 	m.AIToolSelected = make([]bool, len(aiToolIDMap))
 
 	opts := m.GetCurrentOptions()
-	m.Cursor = len(opts) - 1 // "Confirm selection" (last index)
+	selectAllIdx := len(opts) - 2 // "Select All" (second to last)
+	m.Cursor = selectAllIdx
 
-	// Navigate up — should skip separator and land on last tool
+	// Navigate up from Select All — should skip separator and land on last tool
 	result, _ := m.handleAIToolsKeys("up")
 	newModel := result.(Model)
 
@@ -1974,7 +1980,7 @@ func TestRenderCategoryItemsScrollIndicators(t *testing.T) {
 	m := NewModel()
 	m.Screen = ScreenAIFrameworkCategoryItems
 	m.Width = 100
-	m.Height = 15 // Small enough to trigger scrolling for Skills (85 items)
+	m.Height = 15                // Small enough to trigger scrolling for Skills (85 items)
 	m.SelectedModuleCategory = 3 // Skills
 	m.AICategorySelected = make(map[string][]bool)
 	for _, cat := range moduleCategories {

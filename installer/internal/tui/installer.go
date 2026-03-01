@@ -1241,6 +1241,27 @@ func stepInstallAITools(m *Model) error {
 		SendLog(stepID, "⚙️ Copied AGENTS.md to ~/.codex/")
 	}
 
+	// Install and configure Qwen Code
+	if hasAITool(m.Choices.AITools, "qwen") {
+		SendLog(stepID, "Installing Qwen Code...")
+		result := system.RunWithLogs(`npm install -g @qwen-code/qwen-code@latest`, nil, func(line string) {
+			SendLog(stepID, line)
+		})
+		if result.Error != nil {
+			SendLog(stepID, "⚠️ Could not install Qwen Code (run 'npm install -g @qwen-code/qwen-code@latest' manually)")
+		} else {
+			SendLog(stepID, "✓ Qwen Code installed")
+		}
+
+		SendLog(stepID, "Configuring Qwen Code...")
+		qwenDir := filepath.Join(homeDir, ".qwen")
+		system.EnsureDir(qwenDir)
+		system.EnsureDir(filepath.Join(qwenDir, "skills"))
+		system.CopyFile(filepath.Join(repoDir, "GentlemanQwen/QWEN.md"), filepath.Join(qwenDir, "QWEN.md"))
+		system.CopyFile(filepath.Join(repoDir, "GentlemanQwen/settings.json"), filepath.Join(qwenDir, "settings.json"))
+		SendLog(stepID, "🧠 Copied QWEN.md and settings config to ~/.qwen/")
+	}
+
 	// Install GitHub Copilot CLI extension
 	if hasAITool(m.Choices.AITools, "copilot") {
 		SendLog(stepID, "Installing GitHub Copilot CLI...")
@@ -1436,6 +1457,9 @@ func stepInstallAIFramework(m *Model) error {
 		if hasAITool(m.Choices.AITools, "codex") {
 			clis = append(clis, "codex")
 		}
+		if hasAITool(m.Choices.AITools, "qwen") {
+			clis = append(clis, "qwen")
+		}
 		if len(clis) > 0 {
 			setupCmd += " --clis=" + strings.Join(clis, ",")
 		}
@@ -1498,6 +1522,7 @@ func installAgentTeamsLite(m *Model) error {
 		"opencode": "opencode",
 		"gemini":   "gemini-cli",
 		"codex":    "codex",
+		"qwen":     "qwen-code",
 	}
 
 	installed := 0
