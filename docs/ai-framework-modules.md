@@ -1,6 +1,6 @@
 # AI Framework Module Registry
 
-Complete reference of all 206 modules across 6 categories available in the [project-starter-framework](https://github.com/JNZader/project-starter-framework). These modules are configured via the TUI installer's Custom mode or the `--ai-modules` CLI flag.
+Complete reference of all 198 modules across 6 categories available in the [project-starter-framework](https://github.com/JNZader/project-starter-framework). These modules are configured via the TUI installer's Custom mode or the `--ai-modules` CLI flag.
 
 ## Table of Contents
 
@@ -9,7 +9,7 @@ Complete reference of all 206 modules across 6 categories available in the [proj
 - [Categories Summary](#categories-summary)
 - [Hooks (10 items)](#-hooks-10-items)
 - [Commands (20 items)](#-commands-20-items)
-- [Agents (80 items)](#-agents-80-items)
+- [Agents (72 items)](#-agents-72-items)
 - [Skills (85 items)](#-skills-85-items)
 - [SDD — Spec-Driven Development (2 items)](#-sdd--spec-driven-development-2-items)
 - [MCP Servers (9 items)](#-mcp-servers-9-items)
@@ -18,7 +18,7 @@ Complete reference of all 206 modules across 6 categories available in the [proj
 
 ## Overview
 
-The installer presents 206 individual modules organized into 6 categories. In the TUI, you can browse and toggle individual items within each category. However, `setup-global.sh` operates at the **feature level** — selecting ANY item within a category enables that entire feature.
+The installer presents 198 individual modules organized into 6 categories. In the TUI, you can browse and toggle individual items within each category. However, `setup-global.sh` operates at the **feature level** — selecting ANY item within a category enables that entire feature.
 
 ## How Features Work
 
@@ -47,12 +47,12 @@ The individual item selection in the TUI is **informational** — it helps you s
 |----------|------|------:|:-------------|:------:|
 | Hooks | 🪝 | 10 | `hooks` | No |
 | Commands | ⚡ | 20 | `commands` | No |
-| Agents | 🤖 | 80 | `agents` | No |
+| Agents | 🤖 | 72 | `agents` | No |
 | Skills | 🎯 | 85 | `skills` | No |
 | SDD | 📐 | 2 | `sdd` (OpenSpec only) | No |
 | MCP Servers | 🔌 | 9 | `mcp` | Yes |
 
-**Total: 206 modules**
+**Total: 198 modules**
 
 ---
 
@@ -129,42 +129,50 @@ Meta-workflows for planning, reviewing, executing tasks, and generating document
 
 ---
 
-## 🤖 Agents (80 items)
+## 🤖 Agents (72 items)
 
 Specialized AI personas with deep domain expertise. Each agent has a system prompt that shapes its behavior, knowledge focus, and communication style. Switch agents based on the task at hand.
 
-### Business Agents (9)
+> **Note:** This section is auto-generated from the Go source (`installer/internal/tui/update.go`).
+> The Specialists category was consolidated — duplicates moved to their canonical categories (Quality, Development, Infrastructure).
 
-Agents focused on project management, business analysis, stakeholder communication, and technical writing. Useful for non-code tasks like planning sprints, writing specs, and estimating effort.
-
-| ID | Label | Description |
-|----|-------|-------------|
-| `business-agile-pm` | Business: Agile PM | Agile project management with sprint planning, velocity tracking, and retrospectives |
-| `business-business-analyst` | Business: Business Analyst | Requirements gathering, user stories, acceptance criteria, and stakeholder interviews |
-| `business-customer-success` | Business: Customer Success | Customer onboarding flows, support documentation, and satisfaction metrics |
-| `business-data-analyst` | Business: Data Analyst | Data analysis, reporting dashboards, SQL queries, and business intelligence |
-| `business-product-manager` | Business: Product Manager | Product roadmaps, feature prioritization, market analysis, and PRDs |
-| `business-project-estimator` | Business: Project Estimator | Task estimation using story points, T-shirt sizing, and historical velocity |
-| `business-scrum-master` | Business: Scrum Master | Scrum ceremonies, impediment removal, team velocity, and process improvement |
-| `business-stakeholder-communicator` | Business: Stakeholder Communicator | Status reports, executive summaries, and non-technical explanations of technical work |
-| `business-tech-writer` | Business: Tech Writer | Technical documentation, API docs, user guides, and README files |
-
-### Data & AI Agents (10)
-
-Agents specialized in data engineering, machine learning, analytics, and AI research. From ETL pipelines to model training and deployment.
+### General (1)
 
 | ID | Label | Description |
 |----|-------|-------------|
-| `data-ai-ai-researcher` | Data & AI: AI Researcher | AI/ML research, paper summaries, model comparison, and emerging techniques |
-| `data-ai-analytics-engineer` | Data & AI: Analytics Engineer | Analytics pipelines, dbt models, data warehousing, and metrics definitions |
-| `data-ai-data-engineer` | Data & AI: Data Engineer | ETL/ELT pipelines, data lakes, Spark, Airflow, and data quality |
-| `data-ai-data-pipeline-architect` | Data & AI: Data Pipeline Architect | End-to-end data pipeline design, stream processing, and batch architectures |
-| `data-ai-data-scientist` | Data & AI: Data Scientist | Statistical analysis, hypothesis testing, feature engineering, and model selection |
-| `data-ai-data-viz-specialist` | Data & AI: Data Viz Specialist | Data visualization with D3, Plotly, Matplotlib, and dashboard design |
-| `data-ai-feature-engineer` | Data & AI: Feature Engineer | Feature extraction, transformation pipelines, and feature stores |
-| `data-ai-ml-engineer` | Data & AI: ML Engineer | Model training, hyperparameter tuning, distributed training, and serving |
-| `data-ai-mlops-engineer` | Data & AI: MLOps Engineer | ML model deployment, monitoring, A/B testing, and CI/CD for ML |
-| `data-ai-prompt-engineer` | Data & AI: Prompt Engineer | Prompt optimization, few-shot examples, chain-of-thought, and evaluation |
+| `orchestrator` | General: Orchestrator | Master orchestrator that coordinates multiple sub-agents for complex multi-domain tasks |
+
+### Business Agents (6)
+
+Agents focused on project management, business analysis, and technical writing.
+
+| ID | Label | Description |
+|----|-------|-------------|
+| `business-api-designer` | Business: API Designer | API design expert specializing in REST, GraphQL, OpenAPI specifications, and API-first development |
+| `business-business-analyst` | Business: Business Analyst | Business analysis expert specializing in process optimization, workflow design, and gap analysis |
+| `business-product-strategist` | Business: Product Strategist | Product strategy expert for market analysis, feature prioritization, and product roadmapping |
+| `business-project-manager` | Business: Project Manager | Project management expert for sprint planning, task coordination, and team collaboration |
+| `business-requirements-analyst` | Business: Requirements Analyst | Requirements engineering specialist for gathering, analyzing, and documenting system requirements |
+| `business-technical-writer` | Business: Technical Writer | Technical writing expert specializing in documentation, user guides, and tutorials |
+
+### Creative (1)
+
+| ID | Label | Description |
+|----|-------|-------------|
+| `creative-ux-designer` | Creative: UX Designer | UX/UI design expert for user research, wireframing, and design systems |
+
+### Data & AI Agents (6)
+
+Agents specialized in data engineering, machine learning, analytics, and AI.
+
+| ID | Label | Description |
+|----|-------|-------------|
+| `data-ai-ai-engineer` | Data & AI: AI Engineer | AI/ML specialist for LLMs, computer vision, NLP, and production ML systems |
+| `data-ai-analytics-engineer` | Data & AI: Analytics Engineer | Analytics engineering expert specializing in dbt, data modeling, and BI tools |
+| `data-ai-data-engineer` | Data & AI: Data Engineer | Data engineering expert for ETL pipelines, data warehouses, and big data processing |
+| `data-ai-data-scientist` | Data & AI: Data Scientist | Data science expert specializing in statistical analysis, ML, and visualization |
+| `data-ai-mlops-engineer` | Data & AI: MLOps Engineer | MLOps expert for ML pipeline automation, model deployment, and experiment tracking |
+| `data-ai-prompt-engineer` | Data & AI: Prompt Engineer | Prompt engineering specialist for LLM optimization, RAG systems, and fine-tuning |
 
 ### Development Agents (15)
 
@@ -190,7 +198,7 @@ Core software development agents covering frontend, backend, and full-stack acro
 
 ### Infrastructure Agents (7)
 
-Agents for cloud architecture, DevOps, Kubernetes, monitoring, and incident response. From infrastructure-as-code to production troubleshooting.
+Agents for cloud architecture, DevOps, Kubernetes, monitoring, and incident response.
 
 | ID | Label | Description |
 |----|-------|-------------|
@@ -217,26 +225,20 @@ Agents focused on code quality, testing, security, accessibility, and dependency
 | `quality-security-auditor` | Quality: Security Auditor | OWASP Top 10 auditing, dependency vulnerabilities, auth/authz review, and hardening |
 | `quality-test-engineer` | Quality: Test Engineer | Test strategy, unit/integration/E2E testing, mocking, and coverage analysis |
 
-### Specialists Agents (12)
+### Specialists Agents (6)
 
-Focused domain specialists for API design, database optimization, security, documentation, and UX consulting.
+Focused domain specialists with unique expertise not covered by other categories. Duplicate roles (code-reviewer, backend-architect, security-auditor, test-engineer, devops-engineer, documentation-writer) have been consolidated into their canonical categories above.
 
 | ID | Label | Description |
 |----|-------|-------------|
 | `specialists-api-designer` | Specialists: API Designer | RESTful API design: resource modeling, versioning, pagination, and OpenAPI specs |
-| `specialists-backend-architect` | Specialists: Backend Architect | Backend system design: service boundaries, data flow, and integration patterns |
-| `specialists-code-reviewer` | Specialists: Code Reviewer | In-depth code review with architecture and design pattern focus |
 | `specialists-db-optimizer` | Specialists: DB Optimizer | Database query optimization, index tuning, execution plans, and schema design |
-| `specialists-devops-engineer` | Specialists: DevOps Engineer | DevOps practices: GitOps, infrastructure automation, and deployment pipelines |
-| `specialists-documentation-writer` | Specialists: Documentation Writer | Technical writing: architecture docs, runbooks, ADRs, and onboarding guides |
 | `specialists-frontend-developer` | Specialists: Frontend Developer | Frontend development: component architecture, CSS-in-JS, and build optimization |
 | `specialists-performance-analyst` | Specialists: Performance Analyst | Application performance analysis: profiling, flame graphs, and optimization strategies |
 | `specialists-refactor-specialist` | Specialists: Refactor Specialist | Code refactoring: extract method, replace conditional, introduce pattern, and migration |
-| `specialists-security-auditor` | Specialists: Security Auditor | Security review: authentication flows, input validation, encryption, and compliance |
-| `specialists-test-engineer` | Specialists: Test Engineer | Testing strategy and implementation across all levels (unit, integration, E2E, contract) |
 | `specialists-ux-consultant` | Specialists: UX Consultant | UX review: usability heuristics, user flows, accessibility, and design system alignment |
 
-### Specialized Agents (19)
+### Specialized Agents (22)
 
 Niche agents for specific domains like blockchain, game dev, mobile, healthcare, fintech, and advanced workflow patterns.
 
@@ -244,21 +246,19 @@ Niche agents for specific domains like blockchain, game dev, mobile, healthcare,
 |----|-------|-------------|
 | `specialized-agent-generator` | Specialized: Agent Generator | Creates new AI agent definitions with system prompts, tools, and skill files |
 | `specialized-blockchain-developer` | Specialized: Blockchain Developer | Smart contract development (Solidity, Rust), DeFi protocols, and Web3 integration |
-| `specialized-code-migrator` | Specialized: Code Migrator | Code migration between frameworks, languages, or major versions (e.g., Angular→React, v2→v3) |
+| `specialized-code-migrator` | Specialized: Code Migrator | Code migration between frameworks, languages, or major versions (e.g., Angular→React) |
 | `specialized-context-manager` | Specialized: Context Manager | Manages AI context windows: summarization, compression, and relevant context selection |
-| `specialized-documentation-writer` | Specialized: Documentation Writer | Project documentation generation: README, API docs, architecture diagrams, and changelogs |
 | `specialized-ecommerce-expert` | Specialized: E-Commerce Expert | E-commerce systems: payment integration, cart flows, inventory, and order management |
-| `specialized-embedded-engineer` | Specialized: Embedded Engineer | Embedded systems: firmware, RTOS, hardware interfaces, and resource-constrained development |
+| `specialized-embedded-engineer` | Specialized: Embedded Engineer | Embedded systems: firmware, RTOS, hardware interfaces, and resource-constrained dev |
 | `specialized-error-detective` | Specialized: Error Detective | Bug investigation: stack trace analysis, reproduction steps, and root cause identification |
 | `specialized-fintech-specialist` | Specialized: Fintech Specialist | Financial systems: payment processing, compliance (PCI-DSS, SOX), and trading platforms |
-| `specialized-freelance-planner` | Specialized: Freelance Planner | Freelance project planning: scope, timeline, milestones, and client communication |
-| `specialized-freelance-planner-v2` | Specialized: Freelance Planner v2 | Enhanced freelance planning with risk assessment and resource allocation |
-| `specialized-freelance-planner-v3` | Specialized: Freelance Planner v3 | Advanced freelance planning with portfolio management and pricing strategies |
-| `specialized-freelance-planner-v4` | Specialized: Freelance Planner v4 | Full freelance business planning with contracts, invoicing, and client lifecycle |
+| `specialized-freelance-methodology` | Specialized: Freelance Methodology | Pure Kanban + XP methodology for freelance project planning and iteration management |
+| `specialized-freelance-github-automation` | Specialized: Freelance GitHub Automation | Freelance planning with GitHub MCP automation for repos, issues, PRs, milestones, and webhooks |
+| `specialized-freelance-learning-infra` | Specialized: Freelance Learning Infra | Docker-first infrastructure planning with Kanban/XP, progressive learning, and CI/CD |
+| `specialized-freelance-advanced-workflow` | Specialized: Freelance Advanced Workflow | Senior freelancer workflow: GitFlow, Stacked PRs, metrics, retrospectives, and learning graph |
 | `specialized-game-developer` | Specialized: Game Developer | Game development: Unity/Godot, game loops, physics, ECS, and asset pipelines |
 | `specialized-healthcare-dev` | Specialized: Healthcare Dev | Healthcare systems: HIPAA compliance, HL7/FHIR standards, and EHR integration |
 | `specialized-mobile-developer` | Specialized: Mobile Developer | Mobile development: React Native, Flutter, native APIs, and app store deployment |
-| `specialized-parallel-plan-executor` | Specialized: Parallel Plan Executor | Executes multiple independent plan tasks concurrently using sub-agents |
 | `specialized-plan-executor` | Specialized: Plan Executor | Sequential plan execution: reads task list, implements each step, and tracks progress |
 | `specialized-solo-dev-planner` | Specialized: Solo Dev Planner | Solo developer project planning with realistic timelines and MVP prioritization |
 | `specialized-template-writer` | Specialized: Template Writer | Generates project templates, boilerplate, and scaffold configurations |
